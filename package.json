@@ -1,0 +1,29 @@
+{
+    "name": "vigil",
+    "version": "1.0.0",
+    "description": "Agentic observability intelligence - detects and explains infrastructure anomalies using LLMs.",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "lint": "npx tsc --noEmit"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/rajpreet-s/vigil.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/rajpreet-s/vigil/issues"
+    },
+    "homepage": "https://github.com/rajpreet-s/vigil#readme",
+    "devDependencies": {
+        "dotenv": "^17.4.0",
+        "prisma": "^7.6.0",
+        "typescript": "^6.0.2"
+    },
+    "dependencies": {
+        "@prisma/client": "^7.6.0"
+    }
+}
