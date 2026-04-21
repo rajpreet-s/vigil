@@ -1,18 +1,30 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  db:
-    image: postgres:15-alpine
-    container_name: vigil_postgres
-    restart: always
-    environment:
-      POSTGRES_USER: docker
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: vigil
-    ports:
-      - "5433:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    db:
+        image: postgres:15-alpine
+        container_name: vigil_postgres
+        restart: always
+        environment:
+            POSTGRES_USER: docker
+            POSTGRES_PASSWORD: admin
+            POSTGRES_DB: vigil
+        ports:
+            - "5433:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+
+    chroma:
+        image: chromadb/chroma:1.5.8
+        container_name: vigil_chroma
+        restart: always
+        environment:
+            - ALLOW_RESET=true # only needed for test teardown — disable in prod
+        ports:
+            - "8000:8000"
+        volumes:
+            - chroma_data:/chroma/chroma
 
 volumes:
-  postgres_data:
+    postgres_data:
+    chroma_data:
