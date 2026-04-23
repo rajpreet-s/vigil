@@ -1,0 +1,30 @@
+version: "1"
+
+services:
+    nginx:
+        display_name: "Nginx Load Balancer"
+        depends_on:
+            - api_service
+        prometheus_labels:
+            job: "nginx"
+
+    api_service:
+        display_name: "Node.js API"
+        depends_on:
+            - postgresql
+            - redis
+        prometheus_labels:
+            job: "node_api"
+            service: "api"
+
+    postgresql:
+        display_name: "PostgreSQL Primary"
+        depends_on: []
+        prometheus_labels:
+            job: "postgres_exporter"
+
+    redis:
+        display_name: "Redis Cache"
+        depends_on: []
+        prometheus_labels:
+            job: "redis_exporter"
