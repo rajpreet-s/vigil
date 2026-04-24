@@ -10,7 +10,7 @@ export class TopologyGraphImpl implements TopologyGraph {
     }
 
     getUpstream(serviceId: string): string[] {
-        return this.services.get(serviceId)?.dependsOn ?? [];
+        return this.services.get(serviceId)?.dependsOn.map(edge => edge.serviceId) ?? [];
     }
 
     getDownstream(serviceId: string): string[] {
