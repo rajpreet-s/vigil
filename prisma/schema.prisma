@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  engineType = "library"
 }
 
 datasource db {
@@ -21,6 +22,7 @@ enum IncidentStatus {
 model Service {
   id                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                 String               @unique @db.VarChar(255)
+  display_name         String?              @db.VarChar(255)
   priority             Int                  @default(2) @db.SmallInt
   rules                Json                 @default("[]")
   created_at           DateTime             @default(now()) @db.Timestamptz // non-nullable
@@ -102,6 +104,7 @@ model Topology {
   id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   upstream_service   String   @db.VarChar(255) // e.g. "postgresql"
   downstream_service String   @db.VarChar(255) // e.g. "api_service"
+  display_name       String?  @db.VarChar(255)
   description        String? // optional human note: "API reads DB on every request"
   created_at         DateTime @default(now()) @db.Timestamptz
 

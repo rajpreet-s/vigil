@@ -7,7 +7,7 @@ import { TopologyGraphImpl } from "./graph";
 
 interface RawService {
     display_name?: string;
-    depends_on?: string[];
+    depends_on?: Array<string | { service: string; description?: string }>;
     prometheus_labels?: Record<string, string>;
 }
 
@@ -37,7 +37,8 @@ export function detectCycles(services: Map<string, ServiceNode>): void {
         recursionStack.add(nodeId);
 
         const node = services.get(nodeId)!;
-        for (const dep of node.dependsOn) {
+        for (const edge of node.dependsOn) {
+            const dep = edge.serviceId;
             if (recursionStack.has(dep)) {
                 // Build the cycle portion of the path for the error message
                 const cycleStart = pathSoFar.indexOf(dep);
@@ -102,7 +103,8 @@ export function parseTopology(filePath?: string): TopologyGraph {
 
     // Validate all depends_on references point to defined services
     for (const [serviceName, def] of Object.entries(raw.services)) {
-        for (const dep of def.depends_on ?? []) {
+        for (const rawDep of def.depends_on ?? []) {
+            const dep = typeof rawDep === "string" ? rawDep : rawDep.service;
             if (!serviceKeys.has(dep)) {
                 throw new Error(
                     `Error: Service '${dep}' listed in ${serviceName}.depends_on but not defined in services`,
@@ -122,10 +124,18 @@ export function parseTopology(filePath?: string): TopologyGraph {
             );
         }
 
+        // Map raw depends_on elements into DependsOnEdge objects
+        const dependsOnEdges = (def.depends_on ?? []).map((dep) => {
+            if (typeof dep === "string") {
+                return { serviceId: dep };
+            }
+            return { serviceId: dep.service, description: dep.description };
+        });
+
         servicesMap.set(id, {
             id,
             displayName: def.display_name ?? id,
-            dependsOn: def.depends_on ?? [],
+            dependsOn: dependsOnEdges,
             dependents: [], // computed in Step 4
             prometheusLabels: def.prometheus_labels ?? {},
         });
@@ -137,8 +147,8 @@ export function parseTopology(filePath?: string): TopologyGraph {
     // ── Step 5: Compute reverse graph (dependents) ───────────────────────────
     // For each service A, for each B in A.dependsOn → add A to B.dependents
     for (const node of servicesMap.values()) {
-        for (const depId of node.dependsOn) {
-            servicesMap.get(depId)!.dependents.push(node.id);
+        for (const edge of node.dependsOn) {
+            servicesMap.get(edge.serviceId)!.dependents.push(node.id);
         }
     }
 

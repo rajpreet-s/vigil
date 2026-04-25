@@ -7,6 +7,11 @@
 // TopologyEdge (the DB-persisted edge format) lives in types.ts.
 // ServiceNode / TopologyGraph (the in-memory query interface) lives here.
 
+export interface DependsOnEdge {
+    serviceId: string;
+    description?: string;
+}
+
 export interface ServiceNode {
     /** YAML key, e.g. "api_service". Used as the canonical service ID. */
     id: string;
@@ -17,7 +22,7 @@ export interface ServiceNode {
      * Parsed directly from the `depends_on` list in the YAML.
      * "api_service depends on postgresql" means api_service → postgresql edge.
      */
-    dependsOn: string[];
+    dependsOn: DependsOnEdge[];
     /**
      * Direct downstream dependents — services that call THIS service.
      * Computed by the parser by inverting the depends_on graph.

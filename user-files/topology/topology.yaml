@@ -11,7 +11,8 @@ services:
     api_service:
         display_name: "Node.js API"
         depends_on:
-            - postgresql
+            - service: postgresql
+              description: "API relies on PostgreSQL for business data"
             - redis
         prometheus_labels:
             job: "node_api"
