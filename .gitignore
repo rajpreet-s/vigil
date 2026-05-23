@@ -1,4 +1,6 @@
 node_modules
 .env
 /generated/prisma
-/dist
+
+/packages/api/node_modules
+/packages/api/dist
