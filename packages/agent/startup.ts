@@ -39,7 +39,12 @@ export async function initTopology(): Promise<TopologyGraph> {
     const serviceCount = graph.services.size;
 
     // ── Step 2: Collect all directed edges ───────────────────────────────────
-    const edges: Array<{ upstream_service: string; downstream_service: string; description: string; display_name: string }> = [];
+    const edges: Array<{
+        upstream_service: string;
+        downstream_service: string;
+        description: string;
+        display_name: string;
+    }> = [];
 
     for (const node of graph.services.values()) {
         for (const edge of node.dependsOn) {
@@ -81,7 +86,7 @@ export async function initTopology(): Promise<TopologyGraph> {
                 update: {
                     description: edge.description,
                     display_name: edge.display_name,
-                }, 
+                },
                 create: edge,
             });
         }
@@ -94,8 +99,8 @@ export async function initTopology(): Promise<TopologyGraph> {
 
     for (const node of graph.services.values()) {
         const upstream =
-            node.dependsOn.length > 0 
-                ? `depends on [${node.dependsOn.map(d => d.serviceId).join(", ")}]` 
+            node.dependsOn.length > 0
+                ? `depends on [${node.dependsOn.map((d) => d.serviceId).join(", ")}]`
                 : "root service (no dependencies)";
         console.log(`  • ${node.displayName} (${node.id}) — ${upstream}`);
     }

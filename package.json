@@ -6,8 +6,9 @@
     "scripts": {
         "test": "vitest run",
         "lint": "npx tsc --noEmit",
-        "db:generate": "prisma generate",
-        "db:migrate": "prisma migrate dev"
+        "db-generate": "prisma generate",
+        "db-migrate": "prisma migrate dev",
+        "db-reset": "prisma migrate reset"
     },
     "repository": {
         "type": "git",
