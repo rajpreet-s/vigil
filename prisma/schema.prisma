@@ -10,6 +10,7 @@ datasource db {
 enum Severity {
   CRITICAL
   WARNING
+  INFO
 }
 
 enum IncidentStatus {
@@ -33,21 +34,19 @@ model Service {
 }
 
 model Anomaly {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  service_id  String   @db.Uuid
-  service     Service  @relation(fields: [service_id], references: [id])
-  severity    Severity @default(WARNING)
-  metric      String   @db.VarChar(255)
-  value       Float
-  threshold   Float
-  labels      Json     @default("{}")
-  detected_at DateTime @default(now()) @db.Timestamptz
-  processed   Boolean  @default(false)
+  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  metric_name  String              @db.VarChar(255)
+  service_name String              @db.VarChar(255)
+  service      Service             @relation(fields: [service_name], references: [name])
+  severity     Severity            @default(WARNING)
+  detected_at  DateTime            @db.Timestamptz
+  raw_payload  Json
+  incident_id  String?             @db.Uuid
+  incident     CorrelatedIncident? @relation(fields: [incident_id], references: [id])
+  processed    Boolean             @default(false)
 
-  // Many-to-many join to correlated_incidents
-  incident_anomalies IncidentAnomaly[]
-
-  @@index([service_id, processed])
+  @@unique([metric_name, service_name, detected_at])
+  @@index([processed])
   @@map("anomalies")
 }
 
@@ -60,20 +59,10 @@ model CorrelatedIncident {
   confidence        Float
   created_at        DateTime          @default(now()) @db.Timestamptz
   // Relations
-  anomalies         IncidentAnomaly[]
+  anomalies         Anomaly[]
   report            IncidentReport?
 
   @@map("correlated_incidents")
-}
-
-model IncidentAnomaly {
-  incident_id String             @db.Uuid
-  anomaly_id  String             @db.Uuid
-  incident    CorrelatedIncident @relation(fields: [incident_id], references: [id])
-  anomaly     Anomaly            @relation(fields: [anomaly_id], references: [id])
-
-  @@id([incident_id, anomaly_id])
-  @@map("incident_anomalies")
 }
 
 model IncidentReport {
