@@ -11,7 +11,7 @@ export async function getRunbookCollection() {
     return chroma.getOrCreateCollection({
         name: COLLECTION_NAME,
         metadata: {
-            description: "EOIA runbooks — operational procedures for incident response",
+            description: "Vigil runbooks — operational procedures for incident response",
             "hnsw:space": "cosine", // cosine similarity is standard for text retrieval
         },
     });

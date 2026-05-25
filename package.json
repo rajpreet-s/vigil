@@ -10,7 +10,10 @@
         "typecheck": "tsc --noEmit",
         "db-generate": "prisma generate",
         "db-migrate": "prisma migrate dev",
-        "db-reset": "prisma migrate reset"
+        "db-reset": "prisma migrate reset",
+        "db-sync": "prisma migrate dev && prisma generate",
+        "chroma-setup": "ts-node packages/agent/chroma/seed.ts",
+        "start-agent": "ts-node packages/agent/graph.ts"
     },
     "repository": {
         "type": "git",
