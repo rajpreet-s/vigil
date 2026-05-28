@@ -1,5 +1,5 @@
-import { chroma } from "./client";
-import { Runbook } from "../../shared/types";
+import { chroma } from "./client.js";
+import { Runbook } from "../../shared/types.js";
 
 // The single ChromaDB collection for EOIA runbooks.
 // One collection is enough for MVP — metadata filtering handles per-service queries.
@@ -11,7 +11,7 @@ export async function getRunbookCollection() {
     return chroma.getOrCreateCollection({
         name: COLLECTION_NAME,
         metadata: {
-            description: "EOIA runbooks — operational procedures for incident response",
+            description: "Vigil runbooks — operational procedures for incident response",
             "hnsw:space": "cosine", // cosine similarity is standard for text retrieval
         },
     });

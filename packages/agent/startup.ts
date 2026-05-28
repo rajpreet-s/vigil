@@ -1,10 +1,13 @@
 import * as path from "path";
-import { parseTopology } from "../shared/topology/parser";
-import { TopologyGraph } from "../shared/topology";
+import { parseTopology } from "../shared/topology/parser.js";
+import { TopologyGraph } from "../shared/topology/index.js";
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { logger } from "../shared/index.js";
+
+const startupLogger = logger.child({ context: "startup" });
 
 // ─── Agent Startup ───────────────────────────────────────────────────────────
 
@@ -31,8 +34,8 @@ export async function initTopology(): Promise<TopologyGraph> {
     try {
         graph = parseTopology(topologyPath);
     } catch (err) {
-        console.error("[startup] Topology validation failed. Agent cannot start.");
-        console.error(err instanceof Error ? err.message : err);
+        startupLogger.error("Topology validation failed. Agent cannot start.");
+        startupLogger.error(err instanceof Error ? err : new Error(String(err)));
         process.exit(1);
     }
 
@@ -95,14 +98,14 @@ export async function initTopology(): Promise<TopologyGraph> {
     }
 
     // ── Step 4: Log summary ───────────────────────────────────────────────────
-    console.log(`[startup] Topology loaded: ${serviceCount} services, ${edges.length} edges`);
+    startupLogger.info(`Topology loaded: ${serviceCount} services, ${edges.length} edges`);
 
     for (const node of graph.services.values()) {
         const upstream =
             node.dependsOn.length > 0
                 ? `depends on [${node.dependsOn.map((d) => d.serviceId).join(", ")}]`
                 : "root service (no dependencies)";
-        console.log(`  • ${node.displayName} (${node.id}) — ${upstream}`);
+        startupLogger.info(`  • ${node.displayName} (${node.id}) — ${upstream}`);
     }
 
     return graph;

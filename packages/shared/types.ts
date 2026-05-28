@@ -6,7 +6,7 @@ export type ISOTimestamp = string & { readonly __brand: "ISOTimestamp" };
 export const SEVERITY_LEVELS = ["CRITICAL", "WARNING"] as const;
 export type Severity = typeof SEVERITY_LEVELS[number];
 
-export const INCIDENT_STATUSES = ["OPEN", "ACKNOWLEDGED", "RESOLVED", "MUTED"] as const;
+export const INCIDENT_STATUSES = ["OPEN", "PENDING_REVIEW", "APPROVED", "DISMISSED"] as const;
 export type IncidentStatus = typeof INCIDENT_STATUSES[number];
 
 // Standard Prometheus metric names used across the always-fetch checklist,
@@ -129,54 +129,47 @@ export interface CausalLink {
     evidence: string; // human-readable reason for the arrow
     topology_confirmed: boolean; // did the topology map confirm direction?
 }
-
-// Multiple Anomalies grouped, ordered into a causal timeline.
-// The first timeline entry is the root cause candidate.
-// This is what rag_node and llm_node receive as input.
-export interface CorrelatedIncident {
+export interface Incident {
     id: UUID;
-    service: string; // primary (root cause) service
-    root_cause_metric: {
+    thread_id: UUID;
+    status: IncidentStatus;
+    
+    // Affiliation
+    services_affected: string[];
+    
+    // Core Diagnostics & Timeline
+    root_cause_metric?: {
         metric: MetricName;
         at: ISOTimestamp;
     };
-    timeline: Array<{
-        offset_seconds: number; // seconds from first bad signal (0 = root)
+    timeline?: Array<{
+        offset_seconds: number;
         metric: MetricName;
         severity: Severity;
         value: number;
-        service: string; // which service this timeline entry is for
+        service: string;
     }>;
-    causal_chain: CausalLink[]; // ordered directed edges A→B→C
-    blast_radius: string[]; // downstream services in impact order
-    ruled_out: RuledOutItem[]; // standard checklist with findings
-    confidence: number; // 0.0 – 1.0
-    anomaly_ids: UUID[]; // source anomaly UUIDs, for DB processed flag
-}
-
-// ─── Incident report ─────────────────────────────────────────────────────────
-
-// The CorrelatedIncident enriched with RAG runbook match and LLM-formatted output.
-// Written to PostgreSQL as the permanent post-mortem record.
-//
-// Status transition rules:
-//   OPEN → ACKNOWLEDGED  (engineer confirms they are looking at it)
-//   ACKNOWLEDGED → RESOLVED  (incident closed)
-//   OPEN | ACKNOWLEDGED → MUTED  (suppress noisy/known issue — future incidents
-//     for the same service remain un-muted; MUTED is per-incident, not per-service)
-export interface IncidentReport {
-    id: UUID;
-    correlated_incident_id: UUID;
-    service: string;
-    status: IncidentStatus;
-    root_cause_summary: string;
-    fix_steps: string[];
-    causal_chain: CausalLink[]; // copied from CorrelatedIncident for the brief
+    causal_chain?: CausalLink[];
     blast_radius: string[];
-    confidence: number; // 0.87
-    llm_fallback: boolean; // true → LLM used first-principles (no runbook)
-    llm_unavailable: boolean; // true → LLM API was down entirely
-    notification_sent: boolean; // tracks Slack delivery for retry
-    created_at: ISOTimestamp;
+    ruled_out?: RuledOutItem[];
+    
+    // LLM Report Data
+    root_cause_service?: string;
+    rca_summary?: string;
+    fix_steps?: string[];
+    confidence?: string; // 'HIGH' | 'MEDIUM' | 'LOW'
+    
+    // Orchestration & Notification
+    llm_fallback: boolean;
+    llm_unavailable: boolean;
+    notification_sent: boolean;
+    
+    // Timing
+    started_at: ISOTimestamp;
     updated_at: ISOTimestamp;
+    resolved_at?: ISOTimestamp;
 }
+
+// Backwards compatibility aliases
+export type CorrelatedIncident = Incident;
+export type IncidentReport = Incident;

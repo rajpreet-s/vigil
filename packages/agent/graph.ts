@@ -1,6 +1,10 @@
 import { StateGraph, START, END, Annotation } from "@langchain/langgraph";
 import { BaseMessage } from "@langchain/core/messages";
-import { initTopology } from "./startup";
+import { initTopology } from "./startup.js";
+import { logger } from "../shared/index.js";
+import { fileURLToPath } from "url";
+
+const graphLogger = logger.child({ context: "graph" });
 
 export const AgentState = Annotation.Root({
     messages: Annotation<BaseMessage[]>({
@@ -14,7 +18,7 @@ export const AgentState = Annotation.Root({
 });
 
 async function detectAnomalies(state: typeof AgentState.State) {
-    console.log("Analyzing state for anomalies...");
+    graphLogger.info("Analyzing state for anomalies...");
     // Simulate detecting an anomaly
     return {
         anomalies: ["High CPU Usage Detected"],
@@ -23,9 +27,9 @@ async function detectAnomalies(state: typeof AgentState.State) {
 
 async function analyzeAnomalies(state: typeof AgentState.State) {
     if (state.anomalies.length > 0) {
-        console.log(`Analyzing detected anomalies: ${state.anomalies.join(", ")}`);
+        graphLogger.info(`Analyzing detected anomalies: ${state.anomalies.join(", ")}`);
     } else {
-        console.log("No anomalies detected.");
+        graphLogger.info("No anomalies detected.");
     }
     return {};
 }
@@ -53,9 +57,9 @@ const builder = new StateGraph(AgentState)
 export const graph = builder.compile();
 
 export async function runAgent() {
-    console.log("--- Starting Agent Initialization ---");
+    graphLogger.info("--- Starting Agent Initialization ---");
     const topology = await initTopology();
-    console.log("--- Initialized. Starting Agent Run ---");
+    graphLogger.info("--- Initialized. Starting Agent Run ---");
 
     // Pass topology to the components that need it, or it can be accessed
     // by your graph nodes if they are in the same closure, or if you pass it
@@ -63,11 +67,13 @@ export async function runAgent() {
     const initialState = { messages: [], anomalies: [] };
 
     const result = await graph.invoke(initialState);
-    console.log("--- Agent Run Complete ---");
-    console.dir(result, { depth: null });
+    graphLogger.info("--- Agent Run Complete ---");
+    graphLogger.info({ result }, "Agent result payload");
 }
 
 // Execute the agent if this file is run directly
-if (require.main === module) {
-    runAgent().catch(console.error);
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    runAgent().catch((err) => {
+        graphLogger.error(err instanceof Error ? err : new Error(String(err)));
+    });
 }

@@ -9,8 +9,16 @@
 import "dotenv/config";
 import * as fs from "fs";
 import * as path from "path";
-import { chroma } from "./client";
-import { ingestRunbooks, queryRunbooks, RunbookDocument } from "./runbooks";
+import { chroma } from "./client.js";
+import { ingestRunbooks, queryRunbooks, RunbookDocument } from "./runbooks.js";
+import { logger } from "../../shared/index.js";
+
+import { fileURLToPath } from "url";
+
+const seedLogger = logger.child({ context: "chroma:seed" });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Resolve the /runbooks directory relative to the repo root.
 // __dirname = packages/agent/chroma, so we walk up 3 levels.
@@ -58,7 +66,7 @@ function loadRunbooks(): RunbookDocument[] {
 async function seed() {
     // 1. Heartbeat — confirms the Docker service is reachable
     const heartbeat = await chroma.heartbeat();
-    console.log("✅ ChromaDB reachable:", heartbeat);
+    seedLogger.info({ heartbeat }, "ChromaDB reachable");
 
     // 2. Delete the collection if it already exists, then recreate it.
     //    This guarantees a clean slate — no stale documents from previous seeds
@@ -66,16 +74,16 @@ async function seed() {
     const existing = await chroma.listCollections();
     if (existing.some((c) => c.name === "vigil-runbooks")) {
         await chroma.deleteCollection({ name: "vigil-runbooks" });
-        console.log("   ♻️  Old collection deleted");
+        seedLogger.info("Old collection deleted");
     }
 
     // 3. Load runbook files from disk and ingest into the fresh collection
     const runbooks = loadRunbooks();
-    console.log(`   Loaded ${runbooks.length} runbook files from ${RUNBOOKS_DIR}`);
+    seedLogger.info(`Loaded ${runbooks.length} runbook files from ${RUNBOOKS_DIR}`);
 
     await ingestRunbooks(runbooks);
-    console.log(`✅ ${runbooks.length} runbooks ingested`);
-    runbooks.forEach((r) => console.log(`   - [${r.serviceName ?? "all"}] ${r.title}`));
+    seedLogger.info(`✅ ${runbooks.length} runbooks ingested`);
+    runbooks.forEach((r) => seedLogger.info(`   - [${r.serviceName ?? "all"}] ${r.title}`));
 
     // 4. Test query — verify retrieval is working end-to-end
     const results = await queryRunbooks(
@@ -87,12 +95,12 @@ async function seed() {
     const topDistance = results.distances?.[0]?.[0];
     const topScore = topDistance != null ? (1 - topDistance).toFixed(3) : "N/A";
 
-    console.log(`\n✅ Query test passed`);
-    console.log(`   Top match  : ${topTitle}`);
-    console.log(`   Similarity : ${topScore}  (target: > 0.75)`);
+    seedLogger.info(`✅ Query test passed`);
+    seedLogger.info(`   Top match  : ${topTitle}`);
+    seedLogger.info(`   Similarity : ${topScore}  (target: > 0.75)`);
 }
 
 seed().catch((err) => {
-    console.error("❌ ChromaDB seed failed:", err);
+    seedLogger.error(err instanceof Error ? err : new Error(String(err)), "ChromaDB seed failed");
     process.exit(1);
 });
