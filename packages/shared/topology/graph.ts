@@ -1,4 +1,4 @@
-import type { ServiceNode, TopologyGraph } from "./types";
+import type { ServiceNode, TopologyGraph } from "./types.js";
 
 // ─── Concrete graph implementation ───────────────────────────────────────────
 

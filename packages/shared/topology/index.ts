@@ -1,3 +1,3 @@
-export * from "./types";
-export * from "./graph";
-export * from "./parser";
+export * from "./types.js";
+export * from "./graph.js";
+export * from "./parser.js";

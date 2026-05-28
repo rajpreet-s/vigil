@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as yaml from "js-yaml";
-import { ServiceNode, TopologyGraph } from "./types";
-import { TopologyGraphImpl } from "./graph";
+import { ServiceNode, TopologyGraph } from "./types.js";
+import { TopologyGraphImpl } from "./graph.js";
 // ─── Raw YAML shape ──────────────────────────────────────────────────────────
 
 interface RawService {

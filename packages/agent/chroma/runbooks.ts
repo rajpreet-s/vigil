@@ -1,5 +1,5 @@
-import { chroma } from "./client";
-import { Runbook } from "../../shared/types";
+import { chroma } from "./client.js";
+import { Runbook } from "../../shared/types.js";
 
 // The single ChromaDB collection for EOIA runbooks.
 // One collection is enough for MVP — metadata filtering handles per-service queries.
