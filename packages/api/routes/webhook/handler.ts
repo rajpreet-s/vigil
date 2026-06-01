@@ -1,6 +1,6 @@
 import type { RouteHandler } from "fastify";
 import { WebhookService } from "../../services/webhookService.js";
-import type { AlertmanagerPayload } from "../../types/webhook.js";
+import type { AlertmanagerPayload, GitHubPushPayload } from "../../types/webhook.js";
 
 /**
  * Main handler to process Alertmanager webhook payloads.
@@ -47,6 +47,31 @@ export const handleAlertmanagerWebhook: RouteHandler<{ Body: AlertmanagerPayload
         message: `Processed webhook payload batch. Firing anomalies registered: ${processedCount}.`,
         processed: processedCount,
         ignored: ignoredCount
+    });
+};
+
+export const handleGithubWebhook: RouteHandler<{Body: GitHubPushPayload}> = async (request, reply) => {
+    const { commits, head_commit, ref } = request.body;
+    const prisma = request.server.prisma;
+    const webhookService = new WebhookService(prisma, request.log);
+    let processedCount = 0;
+    for (const commit of commits) {
+        try {
+            await webhookService.processDeployment(commit, head_commit, ref);
+            processedCount++;
+        } catch (err) {
+            request.log.error(
+                err,
+                `Failed to process deployment "${commit.id || head_commit?.id || 'unknown'}" for service "${commit.author?.name || head_commit?.author?.name || 'unknown'}"`
+            );
+            // Continue processing other commits rather than crashing the batch
+        }
+    }
+    return reply.status(200).send({
+        success: true,
+        message: `Processed deployment payload batch. Deployments registered: ${processedCount}.`,
+        processed: processedCount,
+        ignored: commits.length - processedCount
     });
 };
 

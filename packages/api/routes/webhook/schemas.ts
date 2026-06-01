@@ -61,3 +61,68 @@ export const alertmanagerWebhookSchema: FastifySchema = {
         }
     }
 };
+
+export const githubWebhookSchema: FastifySchema = {
+    body: {
+        type: "object",
+        required: ["commits", "ref"],
+        properties: {
+            ref: { type: "string" },
+            commits: {
+                type: "array",
+                items: {
+                    type: "object",
+                    required: ["id", "message", "timestamp", "author", "added", "removed", "modified"],
+                    properties: {
+                        id: { type: "string" },
+                        message: { type: "string" },
+                        timestamp: { type: "string" },
+                        author: {
+                            type: "object",
+                            required: ["name"],
+                            properties: {
+                                name: { type: "string" }
+                            },
+                            additionalProperties: true
+                        },
+                        added: { type: "array", items: { type: "string" } },
+                        removed: { type: "array", items: { type: "string" } },
+                        modified: { type: "array", items: { type: "string" } }
+                    },
+                    additionalProperties: true
+                }
+            },
+            head_commit: {
+                type: "object",
+                nullable: true,
+                required: ["id", "message", "timestamp", "author"],
+                properties: {
+                    id: { type: "string" },
+                    message: { type: "string" },
+                    timestamp: { type: "string" },
+                    author: {
+                        type: "object",
+                        required: ["name"],
+                        properties: {
+                            name: { type: "string" }
+                        },
+                        additionalProperties: true
+                    }
+                },
+                additionalProperties: true
+            }
+        },
+        additionalProperties: true
+    },
+    response: {
+        200: {
+            type: "object",
+            properties: {
+                success: { type: "boolean" },
+                message: { type: "string" },
+                processed: { type: "integer" },
+                ignored: { type: "integer" }
+            }
+        }
+    }
+};

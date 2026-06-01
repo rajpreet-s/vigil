@@ -1,6 +1,6 @@
 import { PrismaClient, Severity } from '@prisma/client';
 import type { FastifyBaseLogger } from 'fastify';
-import type { AlertPayload } from '../types/webhook.js';
+import type { AlertPayload, GitHubCommit } from '../types/webhook.js';
 import { IncidentCoordinator } from './IncidentCoordinator.js';
 
 export class WebhookService {
@@ -96,6 +96,70 @@ export class WebhookService {
         if (anomaly && isNewAnomaly) {
             this.callIncidentCoordinator(anomaly.id);
         }
+    }
+
+    public async processDeployment(commit: GitHubCommit, headCommit: any, ref: string): Promise<void> {
+        const filesChanged = [
+            ...commit.added,
+            ...commit.removed,
+            ...commit.modified
+        ];
+
+        const serviceName = this.extractServiceName(filesChanged);
+        if (!serviceName) {
+            this.logger?.info(`Skipping commit ${commit.id} because it did not affect any service packages.`);
+            return;
+        }
+
+        const branch = ref.replace('refs/heads/', '');
+        const author = commit.author?.name || headCommit?.author?.name || 'unknown';
+        const commitSha = commit.id;
+        const prTitle = commit.message.split('\n')[0] ?? null; // Use first line of commit message as PR title
+        const deployedAt = new Date(commit.timestamp || headCommit?.timestamp || new Date());
+
+        this.logger?.info(`Registering deployment event for service ${serviceName}, commit: ${commitSha}`);
+
+        // Insert into deploy_events table
+        const deployEvent = await this.prisma.deployEvent.create({
+            data: {
+                service_name: serviceName,
+                pr_title: prTitle,
+                branch,
+                author,
+                commit_sha: commitSha,
+                files_changed: filesChanged,
+                deployed_at: deployedAt
+            }
+        });
+
+        // Call IncidentCoordinator.onDeployArrived(deployId)
+        await IncidentCoordinator.onDeployArrived(deployEvent.id, this.prisma, this.logger);
+    }
+
+    private extractServiceName(files: string[]): string | null {
+        // Common root directories used in monorepo and multi-service repositories
+        const serviceRoots = ['packages', 'services', 'apps', 'components', 'src'];
+
+        for (const file of files) {
+            // Normalize path separators to forward slashes just in case
+            const normalizedPath = file.replace(/\\/g, '/');
+            const parts = normalizedPath.split('/');
+            
+            if (parts.length > 1) {
+                const rootDir = parts[0];
+                if (rootDir && serviceRoots.includes(rootDir)) {
+                    // For packages/checkout/src/... -> checkout-service
+                    const secondDir = parts[1];
+                    if (secondDir) {
+                        return `${secondDir}-service`;
+                    }
+                } else if (rootDir) {
+                    // For checkout/src/... -> checkout-service
+                    return `${rootDir}-service`;
+                }
+            }
+        }
+        return null;
     }
 
     /**

@@ -99,4 +99,24 @@ export class IncidentCoordinator {
 
         this.logger?.info(`[IncidentCoordinator] Created new incident ${incidentId} for service ${anomaly.service_name}`);
     }
+
+    public static async onDeployArrived(deployId: string, prisma?: PrismaClient, logger?: FastifyBaseLogger) {
+        const log = logger || console;
+        log.info(`[IncidentCoordinator] onDeployArrived triggered for deployment: ${deployId}`);
+        
+        if (!prisma) return;
+
+        try {
+            const deploy = await prisma.deployEvent.findUnique({
+                where: { id: deployId }
+            });
+            if (!deploy) {
+                log.warn(`[IncidentCoordinator] Deployment event ${deployId} not found in database.`);
+                return;
+            }
+            log.info(`[IncidentCoordinator] Successfully processed deployment event for service ${deploy.service_name}`);
+        } catch (err) {
+            log.error(err, `[IncidentCoordinator] Error in onDeployArrived for deployment ${deployId}`);
+        }
+    }
 }
