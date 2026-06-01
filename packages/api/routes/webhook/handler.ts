@@ -52,6 +52,21 @@ export const handleAlertmanagerWebhook: RouteHandler<{ Body: AlertmanagerPayload
 
 export const handleGithubWebhook: RouteHandler<{Body: GitHubPushPayload}> = async (request, reply) => {
     const { commits, head_commit, ref } = request.body;
+
+    // Filter: Only process push/merge events targeted at the designated deploy branch (default: main)
+    const targetBranch = process.env.DEPLOY_BRANCH || "refs/heads/main";
+    if (ref !== targetBranch) {
+        request.log.info(
+            `Ignoring GitHub webhook: push is to branch "${ref}" but target deploy branch is "${targetBranch}".`
+        );
+        return reply.status(200).send({
+            success: true,
+            message: `Ignored push event. Target branch is "${targetBranch}" but push was to "${ref}".`,
+            processed: 0,
+            ignored: commits.length
+        });
+    }
+
     const prisma = request.server.prisma;
     const webhookService = new WebhookService(prisma, request.log);
     let processedCount = 0;
