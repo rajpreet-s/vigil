@@ -1,7 +1,7 @@
 import { PrismaClient, Severity } from '@prisma/client';
 import type { FastifyBaseLogger } from 'fastify';
 import type { AlertPayload, GitHubCommit } from '../types/webhook.js';
-import { IncidentCoordinator } from './IncidentCoordinator.js';
+import { IncidentCoordinator } from './incident-coordinator/IncidentCoordinator.js';
 
 export class WebhookService {
     private prisma: PrismaClient;

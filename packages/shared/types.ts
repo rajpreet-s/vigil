@@ -170,6 +170,16 @@ export interface Incident {
     resolved_at?: ISOTimestamp;
 }
 
+export interface Runbook {
+    id: UUID;
+    chroma_id: string;
+    title: string;
+    service_name?: string;
+    file_path?: string;
+    created_at: ISOTimestamp;
+    updated_at: ISOTimestamp;
+}
+
 // Backwards compatibility aliases
 export type CorrelatedIncident = Incident;
 export type IncidentReport = Incident;

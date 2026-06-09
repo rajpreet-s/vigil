@@ -1,79 +1,43 @@
-import { StateGraph, START, END, Annotation } from "@langchain/langgraph";
-import { BaseMessage } from "@langchain/core/messages";
+import { StateGraph, START, END } from "@langchain/langgraph";
 import { initTopology } from "./startup.js";
 import { logger } from "../shared/index.js";
-import { fileURLToPath } from "url";
+import { AgentStateSchema } from "./agentStateSchema.js";
+import { load_node } from "./nodes/load_node.js";
 
 const graphLogger = logger.child({ context: "graph" });
 
-export const AgentState = Annotation.Root({
-    messages: Annotation<BaseMessage[]>({
-        reducer: (left: BaseMessage[], right: BaseMessage[]) => left.concat(right),
-        default: () => [],
-    }),
-    anomalies: Annotation<string[]>({
-        reducer: (left: string[], right: string[]) => left.concat(right),
-        default: () => [],
-    }),
-});
+// ─── Graph definition ─────────────────────────────────────────────────────────
 
-async function detectAnomalies(state: typeof AgentState.State) {
-    graphLogger.info("Analyzing state for anomalies...");
-    // Simulate detecting an anomaly
-    return {
-        anomalies: ["High CPU Usage Detected"],
-    };
-}
-
-async function analyzeAnomalies(state: typeof AgentState.State) {
-    if (state.anomalies.length > 0) {
-        graphLogger.info(`Analyzing detected anomalies: ${state.anomalies.join(", ")}`);
-    } else {
-        graphLogger.info("No anomalies detected.");
-    }
-    return {};
-}
-
-function shouldAnalyze(state: typeof AgentState.State) {
-    if (state.anomalies.length > 0) {
-        return "analyze";
-    }
-    return END;
-}
-
-const builder = new StateGraph(AgentState)
-    .addNode("detect", detectAnomalies)
-    .addNode("analyze", analyzeAnomalies)
-
-    .addEdge(START, "detect")
-
-    .addConditionalEdges("detect", shouldAnalyze, {
-        analyze: "analyze",
-        [END]: END,
-    })
-
-    .addEdge("analyze", END);
+const builder = new StateGraph(AgentStateSchema)
+    .addNode("load", load_node)
+    .addEdge(START, "load")
+    .addEdge("load", END); // temporary — more nodes will be chained here
 
 export const graph = builder.compile();
 
-export async function runAgent() {
-    graphLogger.info("--- Starting Agent Initialization ---");
-    const topology = await initTopology();
-    graphLogger.info("--- Initialized. Starting Agent Run ---");
+// ─── Boot function ────────────────────────────────────────────────────────────
+// Called ONCE when the agent container starts, before accepting any requests.
+// Parses topology.yaml and upserts edges into the DB so every graph run can
+// read topology rows directly from Postgres without re-parsing YAML.
 
-    // Pass topology to the components that need it, or it can be accessed
-    // by your graph nodes if they are in the same closure, or if you pass it
-    // in the state/configuration. For now, we just ensure it's loaded.
-    const initialState = { messages: [], anomalies: [] };
-
-    const result = await graph.invoke(initialState);
-    graphLogger.info("--- Agent Run Complete ---");
-    graphLogger.info({ result }, "Agent result payload");
+export async function initAgent(): Promise<void> {
+    graphLogger.info("Agent booting — initialising topology...");
+    await initTopology();
+    graphLogger.info("Agent ready.");
 }
 
-// Execute the agent if this file is run directly
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-    runAgent().catch((err) => {
-        graphLogger.error(err instanceof Error ? err : new Error(String(err)));
-    });
+// ─── Per-incident trigger ─────────────────────────────────────────────────────
+// Called by the HTTP server once per incident when the settle timer fires.
+// Sets the LangGraph thread_id to the incidentId so checkpoints are namespaced
+// per incident and the graph can be resumed if it crashes mid-run.
+
+export async function runIncidentAnalysis(incidentId: string): Promise<void> {
+    graphLogger.info({ incidentId }, "Starting incident analysis graph run");
+
+    await graph.invoke(
+        { incidentId },
+        { configurable: { thread_id: incidentId } }
+    );
+
+    graphLogger.info({ incidentId }, "Incident analysis graph run complete");
 }

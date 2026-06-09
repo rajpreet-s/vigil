@@ -14,7 +14,10 @@
         "db-reset": "prisma migrate reset",
         "db-sync": "prisma migrate dev && prisma generate",
         "chroma-setup": "tsx packages/agent/chroma/seed.ts",
-        "start-agent": "tsx packages/agent/graph.ts"
+        "start-agent": "tsx packages/agent/server.ts",
+        "start-api": "tsx packages/api/server.ts",
+        "docker:up": "docker compose up --build",
+        "docker:down": "docker compose down"
     },
     "repository": {
         "type": "git",
