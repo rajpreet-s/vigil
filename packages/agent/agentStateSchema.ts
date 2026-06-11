@@ -1,6 +1,7 @@
 import { Annotation } from "@langchain/langgraph";
 import { BaseMessage } from "@langchain/core/messages";
-import { Anomaly, DeployEvent, Runbook, Topology } from "@prisma/client";
+import { Anomaly, DeployEvent, Runbook } from "@prisma/client";
+import type { TopologyGraph } from "../shared/topology/types.js";
 
 export const AgentStateSchema = Annotation.Root({
     messages: Annotation<BaseMessage[]>({
@@ -20,9 +21,13 @@ export const AgentStateSchema = Annotation.Root({
         reducer: (left, right) => left.concat(right),
         default: () => [],
     }),
-    topology: Annotation<Topology[]>({
+    // ─── Topology graph ────────────────────────────────────────────────────────
+    // Populated by load_node. Typed as the queryable TopologyGraph interface
+    // (not raw DB rows) so every downstream node can call isUpstreamOf(),
+    // getBlastRadius(), getUpstream(), etc. directly without re-walking edges.
+    topology: Annotation<TopologyGraph | null>({
         reducer: (_left, right) => right,
-        default: () => [],
+        default: () => null,
     }),
     causalTimeline: Annotation<Anomaly[]>({
         reducer: (left, right) => left.concat(right),
