@@ -4,6 +4,7 @@ import { TopologyGraphImpl } from "../../shared/topology/graph.js";
 import { prisma } from "../prisma.js";
 import { logger } from "../../shared/index.js";
 import { AgentStateSchema } from "../agentStateSchema.js";
+import { AgentError } from "../errors.js";
 
 const nodeLogger = logger.child({ context: "load_node" });
 
@@ -32,12 +33,18 @@ export async function load_node(
     // ── 1. Fetch anomalies (SELECT FOR UPDATE SKIP LOCKED) ───────────────────
     // Raw SQL is used here because Prisma does not expose SKIP LOCKED through
     // its high-level API. The result is cast to the Prisma Anomaly shape.
-    const rawAnomalies: Anomaly[] = await prisma.$queryRaw`
-        SELECT *
-        FROM anomalies
-        WHERE incident_id = ${incidentId}::uuid
-        FOR UPDATE SKIP LOCKED
-    `;
+    // FATAL: without anomalies the entire graph has nothing to analyse.
+    let rawAnomalies: Anomaly[];
+    try {
+        rawAnomalies = await prisma.$queryRaw`
+            SELECT *
+            FROM anomalies
+            WHERE incident_id = ${incidentId}::uuid
+            FOR UPDATE SKIP LOCKED
+        `;
+    } catch (err) {
+        throw new AgentError("load", "Failed to fetch anomalies from DB", err);
+    }
 
     nodeLogger.info(
         { count: rawAnomalies.length },
@@ -45,25 +52,43 @@ export async function load_node(
     );
 
     // ── 2. Fetch topology graph ───────────────────────────────────────────────
-    const topology = await getTopologyGraph();
+    // DEGRADED: topology failure does not abort the run. Downstream nodes must
+    // null-check state.topology. RCA still runs, just without graph traversal.
+    let topology: TopologyGraph | null = null;
+    try {
+        topology = await getTopologyGraph();
+    } catch (err) {
+        nodeLogger.warn(
+            { err: err instanceof Error ? err.message : String(err) },
+            "load_node: topology fetch failed — continuing without graph"
+        );
+    }
 
     // ── 3. Fetch recent deploy events for all affected services ───────────────
+    // DEGRADED: deploy event failure skips deploy correlation, not a blocker.
     const affectedServices = [
         ...new Set(rawAnomalies.map((a) => a.service_name)),
     ];
 
     const since = new Date(Date.now() - DEPLOY_LOOKBACK_MS);
 
-    const recentDeployments: DeployEvent[] =
-        affectedServices.length > 0
-            ? await prisma.deployEvent.findMany({
-                  where: {
-                      service_name: { in: affectedServices },
-                      deployed_at: { gte: since },
-                  },
-                  orderBy: { deployed_at: "desc" },
-              })
-            : [];
+    let recentDeployments: DeployEvent[] = [];
+    if (affectedServices.length > 0) {
+        try {
+            recentDeployments = await prisma.deployEvent.findMany({
+                where: {
+                    service_name: { in: affectedServices },
+                    deployed_at: { gte: since },
+                },
+                orderBy: { deployed_at: "desc" },
+            });
+        } catch (err) {
+            nodeLogger.warn(
+                { err: err instanceof Error ? err.message : String(err) },
+                "load_node: deploy events fetch failed — continuing without deploy correlation"
+            );
+        }
+    }
 
     nodeLogger.info(
         { count: recentDeployments.length, since: since.toISOString() },

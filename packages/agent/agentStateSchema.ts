@@ -16,6 +16,18 @@ export const AgentStateSchema = Annotation.Root({
         default: () => "",
     }),
 
+    // ─── Run status ────────────────────────────────────────────────────────────
+    // Written by graph.ts on fatal AgentError so notify_node can send a
+    // degraded Slack message instead of silently doing nothing.
+    status: Annotation<"running" | "complete" | "failed">({
+        reducer: (_left, right) => right,
+        default: () => "running",
+    }),
+    failureReason: Annotation<string | null>({
+        reducer: (_left, right) => right,
+        default: () => null,
+    }),
+
     // ─── Raw detection data ────────────────────────────────────────────────────
     rawAnomalies: Annotation<Anomaly[]>({
         reducer: (left, right) => left.concat(right),
