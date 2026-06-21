@@ -6,6 +6,7 @@ import { load_node } from "./nodes/load_node.js";
 import { AgentError } from "./errors.js";
 import { prisma } from "./prisma.js";
 import { IncidentStatus } from "@prisma/client";
+import { correlate_node } from "./nodes/correlate_node.js";
 
 const graphLogger = logger.child({ context: "graph" });
 
@@ -13,8 +14,10 @@ const graphLogger = logger.child({ context: "graph" });
 
 const builder = new StateGraph(AgentStateSchema)
     .addNode("load", load_node)
+    .addNode("correlate", correlate_node)
     .addEdge(START, "load")
-    .addEdge("load", END); // temporary — more nodes will be chained here
+    .addEdge("load", "correlate")
+    .addEdge("correlate", END);
 
 export const graph = builder.compile();
 
