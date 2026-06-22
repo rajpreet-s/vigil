@@ -1,7 +1,7 @@
-import { Annotation } from "@langchain/langgraph";
-import { BaseMessage } from "@langchain/core/messages";
-import { Anomaly, DeployEvent, Runbook } from "@prisma/client";
-import type { TopologyGraph } from "../shared/topology/types.js";
+import { Annotation } from '@langchain/langgraph';
+import { BaseMessage } from '@langchain/core/messages';
+import { Anomaly, DeployEvent, Runbook } from '@prisma/client';
+import type { TopologyGraph } from '../shared/topology/types.js';
 
 export const AgentStateSchema = Annotation.Root({
     messages: Annotation<BaseMessage[]>({
@@ -13,15 +13,15 @@ export const AgentStateSchema = Annotation.Root({
     // incidentId doubles as the LangGraph thread_id
     incidentId: Annotation<string>({
         reducer: (_left, right) => right,
-        default: () => "",
+        default: () => '',
     }),
 
     // ─── Run status ────────────────────────────────────────────────────────────
     // Written by graph.ts on fatal AgentError so notify_node can send a
     // degraded Slack message instead of silently doing nothing.
-    status: Annotation<"running" | "complete" | "failed">({
+    status: Annotation<'running' | 'complete' | 'failed'>({
         reducer: (_left, right) => right,
-        default: () => "running",
+        default: () => 'running',
     }),
     failureReason: Annotation<string | null>({
         reducer: (_left, right) => right,
@@ -49,7 +49,7 @@ export const AgentStateSchema = Annotation.Root({
         reducer: (_left, right) => right,
         default: () => null,
     }),
-    confidence: Annotation<"HIGH" | "MEDIUM" | "LOW" | null>({
+    confidence: Annotation<'HIGH' | 'MEDIUM' | 'LOW' | null>({
         reducer: (_left, right) => right,
         default: () => null,
     }),
@@ -64,8 +64,12 @@ export const AgentStateSchema = Annotation.Root({
         default: () => null,
     }),
 
-    // ─── Runbook retrieval ─────────────────────────────────────────────────────
-    runbooks: Annotation<Runbook[]>({
+    // ChromaDB vector-search results from retrieval_node.
+    // Distinct from the Prisma `runbooks` table mirror — these are the raw
+    // semantic matches (content + metadata) that get injected into the LLM prompt.
+    runbookChunks: Annotation<
+        { content: string | null; metadata: Record<string, unknown> | null }[]
+    >({
         reducer: (left, right) => left.concat(right),
         default: () => [],
     }),
@@ -81,7 +85,7 @@ export const AgentStateSchema = Annotation.Root({
     }),
 
     // ─── Human-in-the-loop ─────────────────────────────────────────────────────
-    humanDecision: Annotation<"approved" | "dismissed" | null>({
+    humanDecision: Annotation<'approved' | 'dismissed' | null>({
         reducer: (_left, right) => right,
         default: () => null,
     }),

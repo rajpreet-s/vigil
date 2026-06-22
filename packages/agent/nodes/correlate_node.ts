@@ -1,9 +1,9 @@
-import { AgentStateSchema } from "../agentStateSchema.js";
-import { logger } from "../../shared/index.js";
-import { Anomaly, DeployEvent } from "@prisma/client";
-import { TopologyGraph } from "../../shared/topology/types.js";
+import { AgentStateSchema } from '../agentStateSchema.js';
+import { logger } from '../../shared/index.js';
+import { Anomaly, DeployEvent } from '@prisma/client';
+import { TopologyGraph } from '../../shared/topology/types.js';
 
-const nodeLogger = logger.child({ context: "correlate_node" });
+const nodeLogger = logger.child({ context: 'correlate_node' });
 
 // ─── Pure helpers (exported for unit tests) ───────────────────────────────────
 
@@ -15,10 +15,7 @@ const nodeLogger = logger.child({ context: "correlate_node" });
  * Isolated anomalies (no anomalous neighbour in the graph) are dropped —
  * they fired by coincidence with no dependency path to the incident.
  */
-export function buildCausalTimeline(
-    rawAnomalies: Anomaly[],
-    topology: TopologyGraph
-): Anomaly[] {
+export function buildCausalTimeline(rawAnomalies: Anomaly[], topology: TopologyGraph): Anomaly[] {
     const anomalousServices = new Set<string>(rawAnomalies.map((a) => a.service_name));
 
     const connected = rawAnomalies.filter((anomaly) => {
@@ -65,15 +62,15 @@ export function pickRootCause(
     causalTimeline: Anomaly[],
     rawAnomalies: Anomaly[],
     topology: TopologyGraph | null
-): { candidate: Anomaly | null; confidence: "HIGH" | "MEDIUM" | "LOW" } {
+): { candidate: Anomaly | null; confidence: 'HIGH' | 'MEDIUM' | 'LOW' } {
     if (rawAnomalies.length === 0) {
-        return { candidate: null, confidence: "LOW" };
+        return { candidate: null, confidence: 'LOW' };
     }
 
     // Single anomaly — trivially the root regardless of topology.
     // MEDIUM: only one data point; LLM can still reason about it.
     if (rawAnomalies.length === 1) {
-        return { candidate: rawAnomalies[0], confidence: "MEDIUM" };
+        return { candidate: rawAnomalies[0], confidence: 'MEDIUM' };
     }
 
     // No topology — all we have is time ordering. Pick the earliest anomaly
@@ -82,7 +79,7 @@ export function pickRootCause(
         const earliest = [...rawAnomalies].sort(
             (a, b) => a.detected_at.getTime() - b.detected_at.getTime()
         )[0];
-        return { candidate: earliest, confidence: "LOW" };
+        return { candidate: earliest, confidence: 'LOW' };
     }
 
     // Topology exists but connected chain is empty — every anomaly was
@@ -93,7 +90,7 @@ export function pickRootCause(
         const earliest = [...rawAnomalies].sort(
             (a, b) => a.detected_at.getTime() - b.detected_at.getTime()
         )[0];
-        return { candidate: earliest, confidence: "MEDIUM" };
+        return { candidate: earliest, confidence: 'MEDIUM' };
     }
 
     // Normal case: topology + connected chain.
@@ -109,12 +106,12 @@ export function pickRootCause(
     if (!hasAnomalousUpstream) {
         // Earliest in the chain AND nothing upstream is anomalous.
         // This service can't blame anyone — strongest possible signal.
-        return { candidate, confidence: "HIGH" };
+        return { candidate, confidence: 'HIGH' };
     } else {
         // Earliest in the chain but something upstream is also anomalous.
         // The true root may sit further up; LLM should investigate the full
         // causalTimeline.
-        return { candidate, confidence: "MEDIUM" };
+        return { candidate, confidence: 'MEDIUM' };
     }
 }
 
@@ -154,46 +151,40 @@ export function buildDeployCorrelation(
         );
 
         for (const deploy of matchingDeploys) {
-            const lagSeconds = Math.round(
-                (anomalyTime - deploy.deployed_at.getTime()) / 1000
-            );
+            const lagSeconds = Math.round((anomalyTime - deploy.deployed_at.getTime()) / 1000);
             const lagMin = Math.floor(lagSeconds / 60);
             const lagSec = lagSeconds % 60;
-            const lagLabel = lagMin > 0
-                ? `${lagMin}m ${lagSec}s`
-                : `${lagSec}s`;
+            const lagLabel = lagMin > 0 ? `${lagMin}m ${lagSec}s` : `${lagSec}s`;
 
             // files_changed is stored as JSON (string[]) — parse it safely.
             let files: string[] = [];
             try {
                 const raw = deploy.files_changed;
-                files = Array.isArray(raw) ? raw as string[] : JSON.parse(raw as string);
+                files = Array.isArray(raw) ? (raw as string[]) : JSON.parse(raw as string);
             } catch {
                 files = [];
             }
 
-            const filesSummary = files.length > 0
-                ? files.join(", ")
-                : "(no file list recorded)";
+            const filesSummary = files.length > 0 ? files.join(', ') : '(no file list recorded)';
 
             hits.push(
                 `[DEPLOY CORRELATION]\n` +
-                `  Service:       ${deploy.service_name}\n` +
-                `  PR:            ${deploy.pr_title ?? "(no title)"}\n` +
-                `  Branch:        ${deploy.branch}\n` +
-                `  Author:        ${deploy.author}\n` +
-                `  Commit:        ${deploy.commit_sha}\n` +
-                `  Deployed at:   ${deploy.deployed_at.toISOString()}\n` +
-                `  Anomaly at:    ${anomaly.detected_at.toISOString()}\n` +
-                `  Lag:           ${lagLabel} after deploy\n` +
-                `  Files changed: ${filesSummary}`
+                    `  Service:       ${deploy.service_name}\n` +
+                    `  PR:            ${deploy.pr_title ?? '(no title)'}\n` +
+                    `  Branch:        ${deploy.branch}\n` +
+                    `  Author:        ${deploy.author}\n` +
+                    `  Commit:        ${deploy.commit_sha}\n` +
+                    `  Deployed at:   ${deploy.deployed_at.toISOString()}\n` +
+                    `  Anomaly at:    ${anomaly.detected_at.toISOString()}\n` +
+                    `  Lag:           ${lagLabel} after deploy\n` +
+                    `  Files changed: ${filesSummary}`
             );
         }
     }
 
     if (hits.length === 0) return null;
 
-    return hits.join("\n\n");
+    return hits.join('\n\n');
 }
 
 // ─── correlate_node ─────────────────────────────────────────────────────────
@@ -205,7 +196,7 @@ export async function correlate_node(
 
     nodeLogger.info(
         { count: rawAnomalies.length, anomaly_ids: rawAnomalies.map((a) => a.id) },
-        "correlate_node: starting anomaly correlation"
+        'correlate_node: starting anomaly correlation'
     );
 
     // ── Build causal timeline ─────────────────────────────────────────────────
@@ -223,12 +214,12 @@ export async function correlate_node(
                 connected: causalTimeline.length,
                 dropped: rawAnomalies.length - causalTimeline.length,
             },
-            "correlate_node: topology-aware causal timeline built"
+            'correlate_node: topology-aware causal timeline built'
         );
     } else {
         nodeLogger.warn(
             { count: rawAnomalies.length },
-            "correlate_node: no topology — falling back to time-ordered timeline, confidence will be LOW"
+            'correlate_node: no topology — falling back to time-ordered timeline, confidence will be LOW'
         );
 
         causalTimeline = buildCausalTimelineWithoutTopology(rawAnomalies);
@@ -248,13 +239,13 @@ export async function correlate_node(
         {
             rootCauseCandidate: rootCauseCandidate?.service_name ?? null,
             confidence,
-            deployCorrelation: deployCorrelation !== null ? "found" : "none",
+            deployCorrelation: deployCorrelation !== null ? 'found' : 'none',
             timeline: causalTimeline.map((a) => ({
                 service: a.service_name,
                 detected_at: a.detected_at,
             })),
         },
-        "correlate_node: correlation complete"
+        'correlate_node: correlation complete'
     );
 
     return {

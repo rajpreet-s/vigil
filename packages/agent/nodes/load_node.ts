@@ -1,12 +1,12 @@
-import { type Anomaly, type DeployEvent, type Topology } from "@prisma/client";
-import type { TopologyGraph, ServiceNode } from "../../shared/topology/types.js";
-import { TopologyGraphImpl } from "../../shared/topology/graph.js";
-import { prisma } from "../prisma.js";
-import { logger } from "../../shared/index.js";
-import { AgentStateSchema } from "../agentStateSchema.js";
-import { AgentError } from "../errors.js";
+import { type Anomaly, type DeployEvent, type Topology } from '@prisma/client';
+import type { TopologyGraph, ServiceNode } from '../../shared/topology/types.js';
+import { TopologyGraphImpl } from '../../shared/topology/graph.js';
+import { prisma } from '../prisma.js';
+import { logger } from '../../shared/index.js';
+import { AgentStateSchema } from '../agentStateSchema.js';
+import { AgentError } from '../errors.js';
 
-const nodeLogger = logger.child({ context: "load_node" });
+const nodeLogger = logger.child({ context: 'load_node' });
 
 // ─── load_node ────────────────────────────────────────────────────────────────
 //
@@ -28,7 +28,7 @@ export async function load_node(
     state: typeof AgentStateSchema.State
 ): Promise<Partial<typeof AgentStateSchema.State>> {
     const incidentId = state.incidentId;
-    nodeLogger.info({ incidentId }, "load_node: starting data fetch");
+    nodeLogger.info({ incidentId }, 'load_node: starting data fetch');
 
     // ── 1. Fetch anomalies (SELECT FOR UPDATE SKIP LOCKED) ───────────────────
     // Raw SQL is used here because Prisma does not expose SKIP LOCKED through
@@ -43,13 +43,10 @@ export async function load_node(
             FOR UPDATE SKIP LOCKED
         `;
     } catch (err) {
-        throw new AgentError("load", "Failed to fetch anomalies from DB", err);
+        throw new AgentError('load', 'Failed to fetch anomalies from DB', err);
     }
 
-    nodeLogger.info(
-        { count: rawAnomalies.length },
-        "load_node: anomalies fetched"
-    );
+    nodeLogger.info({ count: rawAnomalies.length }, 'load_node: anomalies fetched');
 
     // ── 2. Fetch topology graph ───────────────────────────────────────────────
     // DEGRADED: topology failure does not abort the run. Downstream nodes must
@@ -60,15 +57,13 @@ export async function load_node(
     } catch (err) {
         nodeLogger.warn(
             { err: err instanceof Error ? err.message : String(err) },
-            "load_node: topology fetch failed — continuing without graph"
+            'load_node: topology fetch failed — continuing without graph'
         );
     }
 
     // ── 3. Fetch recent deploy events for all affected services ───────────────
     // DEGRADED: deploy event failure skips deploy correlation, not a blocker.
-    const affectedServices = [
-        ...new Set(rawAnomalies.map((a) => a.service_name)),
-    ];
+    const affectedServices = [...new Set(rawAnomalies.map((a) => a.service_name))];
 
     const since = new Date(Date.now() - DEPLOY_LOOKBACK_MS);
 
@@ -80,19 +75,19 @@ export async function load_node(
                     service_name: { in: affectedServices },
                     deployed_at: { gte: since },
                 },
-                orderBy: { deployed_at: "desc" },
+                orderBy: { deployed_at: 'desc' },
             });
         } catch (err) {
             nodeLogger.warn(
                 { err: err instanceof Error ? err.message : String(err) },
-                "load_node: deploy events fetch failed — continuing without deploy correlation"
+                'load_node: deploy events fetch failed — continuing without deploy correlation'
             );
         }
     }
 
     nodeLogger.info(
         { count: recentDeployments.length, since: since.toISOString() },
-        "load_node: deploy events fetched"
+        'load_node: deploy events fetched'
     );
 
     return {
@@ -118,7 +113,7 @@ export async function load_node(
 async function getTopologyGraph(): Promise<TopologyGraph> {
     const rows: Topology[] = await prisma.topology.findMany();
 
-    nodeLogger.info({ count: rows.length }, "load_node: topology rows fetched");
+    nodeLogger.info({ count: rows.length }, 'load_node: topology rows fetched');
 
     // ── Pass 1: ensure every referenced service has a node ───────────────────
     const services = new Map<string, ServiceNode>();
