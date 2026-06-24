@@ -1,23 +1,40 @@
-import { StateGraph, START, END } from "@langchain/langgraph";
-import { initTopology } from "./startup.js";
-import { logger } from "../shared/index.js";
-import { AgentStateSchema } from "./agentStateSchema.js";
-import { load_node } from "./nodes/load_node.js";
-import { AgentError } from "./errors.js";
-import { prisma } from "./prisma.js";
-import { IncidentStatus } from "@prisma/client";
-import { correlate_node } from "./nodes/correlate_node.js";
+import { StateGraph, START, END } from '@langchain/langgraph';
+import { initTopology } from './startup.js';
+import { logger } from '../shared/index.js';
+import { AgentStateSchema } from './agentStateSchema.js';
+import { load_node } from './nodes/load_node.js';
+import { AgentError } from './errors.js';
+import { prisma } from './prisma.js';
+import { IncidentStatus } from '@prisma/client';
+import { correlate_node } from './nodes/correlate_node.js';
+import { retrieval_node } from './nodes/retrieval_node.js';
+import { investigate_node } from './nodes/investigate_node.js';
 
-const graphLogger = logger.child({ context: "graph" });
+const graphLogger = logger.child({ context: 'graph' });
 
 // ─── Graph definition ─────────────────────────────────────────────────────────
 
 const builder = new StateGraph(AgentStateSchema)
-    .addNode("load", load_node)
-    .addNode("correlate", correlate_node)
-    .addEdge(START, "load")
-    .addEdge("load", "correlate")
-    .addEdge("correlate", END);
+    .addNode('load', load_node)
+    .addNode('correlate', correlate_node)
+    .addNode('retrieval', retrieval_node)
+    .addNode('investigate', investigate_node)
+
+    .addEdge(START, 'load')
+    .addEdge('load', 'correlate')
+
+    // After correlation, branch on confidence:
+    //   LOW    → investigate first (extra LLM reasoning to resolve ambiguity),
+    //            then retrieval so rca_node still gets runbooks
+    //   MEDIUM/HIGH → skip investigate, go straight to retrieval
+    //
+    // retrieval always runs before END so rca_node has runbook context
+    // regardless of which branch was taken.
+    .addConditionalEdges('correlate', (state) => {
+        return state.confidence === 'LOW' ? 'investigate' : 'retrieval';
+    })
+    .addEdge('investigate', 'retrieval')
+    .addEdge('retrieval', END);
 
 export const graph = builder.compile();
 
@@ -27,9 +44,9 @@ export const graph = builder.compile();
 // read topology rows directly from Postgres without re-parsing YAML.
 
 export async function initAgent(): Promise<void> {
-    graphLogger.info("Agent booting — initialising topology...");
+    graphLogger.info('Agent booting — initialising topology...');
     await initTopology();
-    graphLogger.info("Agent ready.");
+    graphLogger.info('Agent ready.');
 }
 
 // ─── Per-incident trigger ─────────────────────────────────────────────────────
@@ -44,15 +61,12 @@ export async function initAgent(): Promise<void> {
 //                 server.ts can log it at ERROR level as an unhandled exception.
 
 export async function runIncidentAnalysis(incidentId: string): Promise<void> {
-    graphLogger.info({ incidentId }, "Starting incident analysis graph run");
+    graphLogger.info({ incidentId }, 'Starting incident analysis graph run');
 
     try {
-        await graph.invoke(
-            { incidentId },
-            { configurable: { thread_id: incidentId } }
-        );
+        await graph.invoke({ incidentId }, { configurable: { thread_id: incidentId } });
 
-        graphLogger.info({ incidentId }, "Incident analysis graph run complete");
+        graphLogger.info({ incidentId }, 'Incident analysis graph run complete');
     } catch (err) {
         if (err instanceof AgentError) {
             // ── Known, typed node failure ──────────────────────────────────────
@@ -64,11 +78,9 @@ export async function runIncidentAnalysis(incidentId: string): Promise<void> {
                     incidentId,
                     node: err.node,
                     message: err.message,
-                    cause: err.cause instanceof Error
-                        ? err.cause.message
-                        : String(err.cause ?? ""),
+                    cause: err.cause instanceof Error ? err.cause.message : String(err.cause ?? ''),
                 },
-                "Graph run aborted: node threw AgentError"
+                'Graph run aborted: node threw AgentError'
             );
 
             await markIncidentFailed(incidentId, err.message);
@@ -76,10 +88,7 @@ export async function runIncidentAnalysis(incidentId: string): Promise<void> {
             // ── Unexpected crash ───────────────────────────────────────────────
             // Do not swallow — rethrow so server.ts .catch() surfaces it as an
             // unhandled exception with its own ERROR log entry.
-            graphLogger.error(
-                { incidentId, err },
-                "Graph run crashed unexpectedly"
-            );
+            graphLogger.error({ incidentId, err }, 'Graph run crashed unexpectedly');
             throw err;
         }
     }
@@ -89,10 +98,7 @@ export async function runIncidentAnalysis(incidentId: string): Promise<void> {
 // Writes failure status back to Postgres so the incident is never left
 // silently pending. The `reason` is stored for dashboard / on-call visibility.
 
-async function markIncidentFailed(
-    incidentId: string,
-    reason: string
-): Promise<void> {
+async function markIncidentFailed(incidentId: string, reason: string): Promise<void> {
     try {
         await prisma.incident.update({
             where: { id: incidentId },
@@ -106,8 +112,7 @@ async function markIncidentFailed(
         // AgentError has already been logged above with full context.
         graphLogger.error(
             { incidentId, dbErr },
-            "markIncidentFailed: could not write failure status to DB"
+            'markIncidentFailed: could not write failure status to DB'
         );
     }
 }
-
