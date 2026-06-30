@@ -79,11 +79,35 @@ export const AgentStateSchema = Annotation.Root({
         reducer: (_left, right) => right,
         default: () => null,
     }),
+
+    // ── Per-question Slack-ready answers produced by rca_node ─────────────────
+    // The LLM writes these as Slack mrkdwn strings with service names, metrics,
+    // and timestamps already woven in. human_review_node and notify_node drop
+    // them verbatim into Block Kit sections — no TypeScript formatting needed.
+    //
+    // Q1: "N services degraded in cascade:\n• *redis* (`cache_hit_rate`) · 14:02 UTC → ..."
+    q1WhatBroke: Annotation<string | null>({
+        reducer: (_left, right) => right,
+        default: () => null,
+    }),
+    // Q2: "Root cause: *redis* — `cache_hit_rate` spiked at 14:02 UTC\n..."
+    q2WhatCausedIt: Annotation<string | null>({
+        reducer: (_left, right) => right,
+        default: () => null,
+    }),
+    // Q3: "⚠️ api-gateway deployed 12 min before first anomaly (@alice · 3 files)"
+    //     OR "✅ No deploy found within the 30-minute window"
+    q3DidWeCauseIt: Annotation<string | null>({
+        reducer: (_left, right) => right,
+        default: () => null,
+    }),
+
+    // rcaSummary: DB/audit prose — derived from Q1+Q2+Q3 joined, not shown in Slack.
     rcaSummary: Annotation<string | null>({
         reducer: (_left, right) => right,
         default: () => null,
     }),
-    // Array of concrete fix commands / actions produced by rca_node from runbook chunks.
+    // Q4: Array of concrete fix commands / actions produced by rca_node.
     fixSteps: Annotation<string[]>({
         reducer: (_left, right) => right,
         default: () => [],
