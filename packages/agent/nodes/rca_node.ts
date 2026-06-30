@@ -95,22 +95,27 @@ export async function rca_node(
     }
 
     // ── Parse JSON output ─────────────────────────────────────────────────────
-    const { rcaSummary, fixSteps, rcaConfidence } = parseRcaResponse(rawText, incidentId);
+    const { q1WhatBroke, q2WhatCausedIt, q3DidWeCauseIt, fixSteps, rcaConfidence } =
+        parseRcaResponse(rawText, incidentId);
+
+    // Derive prose summary for DB/audit — Q1+Q2+Q3 joined. Not shown in Slack.
+    const rcaSummary = [q1WhatBroke, q2WhatCausedIt, q3DidWeCauseIt]
+        .filter(Boolean)
+        .join(' | ');
 
     nodeLogger.info(
         {
             incidentId,
             rcaConfidence,
             fixStepsCount: fixSteps.length,
-            rcaSummarySnippet: rcaSummary.slice(0, 120),
+            q1Snippet: q1WhatBroke.slice(0, 80),
+            q2Snippet: q2WhatCausedIt.slice(0, 80),
         },
         'rca_node: LLM analysis complete'
     );
 
     // ── Persist to incidents table ────────────────────────────────────────────
-    // Write all three output fields plus root_cause_service so the Slack
-    // notification and the React UI can read structured data directly from DB
-    // without deserializing state.
+    // rcaSummary (prose join) and fix_steps go to DB; Q strings live in state.
     try {
         await prisma.incident.update({
             where: { id: incidentId },
@@ -134,7 +139,7 @@ export async function rca_node(
         );
     }
 
-    return { rcaSummary, fixSteps, rcaConfidence };
+    return { q1WhatBroke, q2WhatCausedIt, q3DidWeCauseIt, fixSteps, rcaConfidence, rcaSummary };
 }
 
 // ─── buildSystemPrompt ────────────────────────────────────────────────────────
@@ -227,14 +232,21 @@ ${runbookText}
 OUTPUT INSTRUCTIONS:
 
 Return ONLY a valid JSON object. No markdown fences, no explanation text outside the JSON.
+All string values must be valid Slack mrkdwn. Use *bold* for service/metric names and \`backticks\` for metric/command names.
 
 {
-  "rcaSummary": "<Q1+Q2 in ≤3 sentences: which services degraded in what order, what was the root metric/cause. If Q3 evidence shows a deploy preceded degradation, include one sentence naming the deploy, author, and lag time. Be specific — use service names, metric names, timestamps from the evidence.>",
+  "q1WhatBroke": "<N> service(s) degraded in cascade:\n• *service_name* (\`metric_name\`) · HH:MM UTC\n• ...\n(list each anomalous service from the Q1 timeline chronologically. If timeline is empty: 'Insufficient topology data to establish cascade.')",
+
+  "q2WhatCausedIt": "Root cause: *service_name* — \`metric_name\` first triggered at HH:MM UTC\ncascade: *svc1* (HH:MM UTC) → *svc2* (HH:MM UTC) → ...\nConfidence: *HIGH|MEDIUM|LOW* · topology-confirmed cascade\n(If root cause unknown: 'Root cause not conclusively identified. Confidence: *LOW*.')",
+
+  "q3DidWeCauseIt": "<one of two forms>:\n  If deploy preceded anomaly: '⚠️ *service_name* deployed N min before first anomaly · @author · N files changed'\n  If no deploy:               '✅ No deploy found within the 30-minute window'",
+
   "fixSteps": [
-    "<Specific CLI command or action from the runbook excerpts above — not generic advice>",
+    "<Specific CLI command or action verbatim from the runbook excerpts above — not generic advice>",
     "<Next step>",
     "..."
   ],
+
   "rcaConfidence": <float 0.0–1.0 reflecting overall evidence quality>
 }
 
@@ -290,13 +302,18 @@ export function buildTopologySubgraph(
 
 // ─── parseRcaResponse ─────────────────────────────────────────────────────────
 //
-// Parses the LLM JSON response. On parse failure falls back gracefully:
-//   - rcaSummary  → raw text (best-effort)
-//   - fixSteps    → []
-//   - rcaConfidence → 0
+// Parses the LLM JSON response into the 4 per-question fields + rcaConfidence.
+// On parse failure falls back gracefully:
+//   - q1WhatBroke     → raw text (best-effort) or placeholder
+//   - q2WhatCausedIt  → placeholder
+//   - q3DidWeCauseIt  → placeholder
+//   - fixSteps        → []
+//   - rcaConfidence   → 0
 
 interface RcaOutput {
-    rcaSummary: string;
+    q1WhatBroke: string;
+    q2WhatCausedIt: string;
+    q3DidWeCauseIt: string;
     fixSteps: string[];
     rcaConfidence: number;
 }
@@ -311,10 +328,20 @@ export function parseRcaResponse(rawText: string, incidentId: string): RcaOutput
     try {
         const parsed = JSON.parse(cleaned);
 
-        const rcaSummary =
-            typeof parsed.rcaSummary === 'string' && parsed.rcaSummary.trim()
-                ? parsed.rcaSummary.trim()
-                : 'RCA summary unavailable.';
+        const q1WhatBroke =
+            typeof parsed.q1WhatBroke === 'string' && parsed.q1WhatBroke.trim()
+                ? parsed.q1WhatBroke.trim()
+                : '_Insufficient data to determine what broke._';
+
+        const q2WhatCausedIt =
+            typeof parsed.q2WhatCausedIt === 'string' && parsed.q2WhatCausedIt.trim()
+                ? parsed.q2WhatCausedIt.trim()
+                : '_Root cause not identified._';
+
+        const q3DidWeCauseIt =
+            typeof parsed.q3DidWeCauseIt === 'string' && parsed.q3DidWeCauseIt.trim()
+                ? parsed.q3DidWeCauseIt.trim()
+                : '✅ No deploy found within the 30-minute window';
 
         const fixSteps = Array.isArray(parsed.fixSteps)
             ? parsed.fixSteps.filter((s: unknown): s is string => typeof s === 'string')
@@ -323,15 +350,17 @@ export function parseRcaResponse(rawText: string, incidentId: string): RcaOutput
         const rawConfidence = Number(parsed.rcaConfidence);
         const rcaConfidence = isNaN(rawConfidence) ? 0 : Math.min(1, Math.max(0, rawConfidence));
 
-        return { rcaSummary, fixSteps, rcaConfidence };
+        return { q1WhatBroke, q2WhatCausedIt, q3DidWeCauseIt, fixSteps, rcaConfidence };
     } catch (parseErr) {
         nodeLogger.warn(
             { incidentId, parseErr, rawTextSnippet: rawText.slice(0, 200) },
-            'rca_node: JSON parse failed — using raw text as summary fallback'
+            'rca_node: JSON parse failed — using raw text as Q1 fallback'
         );
 
         return {
-            rcaSummary: cleaned.slice(0, 1_000) || 'RCA summary unavailable.',
+            q1WhatBroke: cleaned.slice(0, 500) || '_RCA analysis unavailable._',
+            q2WhatCausedIt: '_Root cause not identified._',
+            q3DidWeCauseIt: '✅ No deploy correlation data available.',
             fixSteps: [],
             rcaConfidence: 0,
         };

@@ -1,4 +1,4 @@
-import { StateGraph, START, END } from '@langchain/langgraph';
+import { StateGraph, START, END, isGraphInterrupt } from '@langchain/langgraph';
 import { initTopology } from './startup.js';
 import { logger } from '../shared/index.js';
 import { AgentStateSchema } from './agentStateSchema.js';
@@ -10,6 +10,9 @@ import { correlate_node } from './nodes/correlate_node.js';
 import { retrieval_node } from './nodes/retrieval_node.js';
 import { investigate_node } from './nodes/investigate_node.js';
 import { rca_node } from './nodes/rca_node.js';
+import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
+import { human_review_node } from './nodes/human_review_node.js';
+import { notify_node } from './nodes/notify_node.js';
 
 const graphLogger = logger.child({ context: 'graph' });
 
@@ -21,6 +24,8 @@ const builder = new StateGraph(AgentStateSchema)
     .addNode('retrieval', retrieval_node)
     .addNode('investigate', investigate_node)
     .addNode('rca', rca_node)
+    .addNode('human_review', human_review_node)
+    .addNode('notify_node', notify_node)
 
     .addEdge(START, 'load')
     .addEdge('load', 'correlate')
@@ -37,9 +42,21 @@ const builder = new StateGraph(AgentStateSchema)
     })
     .addEdge('investigate', 'retrieval')
     .addEdge('retrieval', 'rca')
-    .addEdge('rca', END);
+    .addEdge('rca', 'human_review')
+    .addConditionalEdges('human_review', (state: typeof AgentStateSchema.State) => {
+        return state.humanDecision === 'approved' ? 'notify_node' : END;
+    })
+    .addEdge('notify_node', END);
 
-export const graph = builder.compile();
+const checkpointer = PostgresSaver.fromConnString(process.env.DATABASE_URL || '', {
+    schema: 'vigil',
+});
+
+// NOTE: checkpointer.setup() is intentionally NOT called here.
+// Calling await at module top-level executes during `import`, before the
+// server is ready and before the PG pool is warmed. It is moved into initAgent().
+
+export const graph = builder.compile({ checkpointer });
 
 // ─── Boot function ────────────────────────────────────────────────────────────
 // Called ONCE when the agent container starts, before accepting any requests.
@@ -47,6 +64,10 @@ export const graph = builder.compile();
 // read topology rows directly from Postgres without re-parsing YAML.
 
 export async function initAgent(): Promise<void> {
+    // Set up checkpointer tables in Postgres before any graph run.
+    // This is safe here because the DB pool is already open by the time
+    // server.ts calls initAgent().
+    await checkpointer.setup();
     graphLogger.info('Agent booting — initialising topology...');
     await initTopology();
     graphLogger.info('Agent ready.');
@@ -71,7 +92,17 @@ export async function runIncidentAnalysis(incidentId: string): Promise<void> {
 
         graphLogger.info({ incidentId }, 'Incident analysis graph run complete');
     } catch (err) {
-        if (err instanceof AgentError) {
+        if (isGraphInterrupt(err)) {
+            // ── Human-in-the-loop suspend ─────────────────────────────────────
+            // LangGraph throws a GraphInterrupt when interrupt() is called inside
+            // human_review_node. This is EXPECTED behaviour — the graph has been
+            // checkpointed to Postgres and is waiting for the on-call engineer's
+            // Slack button click. It is not an error.
+            graphLogger.info(
+                { incidentId },
+                'Graph suspended at human_review — awaiting Slack decision'
+            );
+        } else if (err instanceof AgentError) {
             // ── Known, typed node failure ──────────────────────────────────────
             // Log with full structured context so we know exactly which node
             // failed and why, then write the failed status to the incidents table

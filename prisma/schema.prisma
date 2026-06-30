@@ -84,6 +84,9 @@ model Incident {
   // Failure
   failure_reason     String?        @db.Text
 
+  // Slack
+  slack_broadcast_ts String?        @db.VarChar(50)
+
   // Relations
   anomalies          Anomaly[]
 
