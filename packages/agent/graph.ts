@@ -9,6 +9,7 @@ import { IncidentStatus } from '@prisma/client';
 import { correlate_node } from './nodes/correlate_node.js';
 import { retrieval_node } from './nodes/retrieval_node.js';
 import { investigate_node } from './nodes/investigate_node.js';
+import { rca_node } from './nodes/rca_node.js';
 
 const graphLogger = logger.child({ context: 'graph' });
 
@@ -19,6 +20,7 @@ const builder = new StateGraph(AgentStateSchema)
     .addNode('correlate', correlate_node)
     .addNode('retrieval', retrieval_node)
     .addNode('investigate', investigate_node)
+    .addNode('rca', rca_node)
 
     .addEdge(START, 'load')
     .addEdge('load', 'correlate')
@@ -34,7 +36,8 @@ const builder = new StateGraph(AgentStateSchema)
         return state.confidence === 'LOW' ? 'investigate' : 'retrieval';
     })
     .addEdge('investigate', 'retrieval')
-    .addEdge('retrieval', END);
+    .addEdge('retrieval', 'rca')
+    .addEdge('rca', END);
 
 export const graph = builder.compile();
 

@@ -83,6 +83,18 @@ export const AgentStateSchema = Annotation.Root({
         reducer: (_left, right) => right,
         default: () => null,
     }),
+    // Array of concrete fix commands / actions produced by rca_node from runbook chunks.
+    fixSteps: Annotation<string[]>({
+        reducer: (_left, right) => right,
+        default: () => [],
+    }),
+    // Float 0–1 reflecting evidence quality across all signals (timeline, topology,
+    // deploy correlation, runbooks). Distinct from correlate_node's categorical
+    // 'HIGH' | 'MEDIUM' | 'LOW' — this is rca_node's holistic assessment.
+    rcaConfidence: Annotation<number | null>({
+        reducer: (_left, right) => right,
+        default: () => null,
+    }),
 
     // ─── Human-in-the-loop ─────────────────────────────────────────────────────
     humanDecision: Annotation<'approved' | 'dismissed' | null>({
