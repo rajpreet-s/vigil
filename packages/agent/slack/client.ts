@@ -4,7 +4,15 @@ import crypto from 'node:crypto';
 // ─── Slack Web API client ─────────────────────────────────────────────────────
 // Singleton — shared across all nodes. Token is read once at startup.
 
-export const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
+let _slack: WebClient | null = null;
+export const slack = new Proxy({} as WebClient, {
+    get(target, prop, receiver) {
+        if (!_slack) {
+            _slack = new WebClient(process.env.SLACK_BOT_TOKEN);
+        }
+        return Reflect.get(_slack, prop, receiver);
+    }
+});
 
 // ─── verifySlackSignature ─────────────────────────────────────────────────────
 //

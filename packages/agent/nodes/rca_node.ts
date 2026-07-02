@@ -1,11 +1,11 @@
 import { AgentStateSchema } from '../agentStateSchema.js';
 import { logger } from '../../shared/index.js';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
-import { SystemMessage, HumanMessage } from '@langchain/core/messages';
+import { SystemMessage, HumanMessage, AIMessage } from '@langchain/core/messages';
 import { prisma } from '../prisma.js';
 import { AgentError } from '../errors.js';
 import { Anomaly } from '@prisma/client';
 import type { TopologyGraph } from '../../shared/topology/types.js';
+import { invokeLlmWithRetryAndFallback } from '../llm.js';
 
 const nodeLogger = logger.child({ context: 'rca_node' });
 
@@ -67,19 +67,13 @@ export async function rca_node(
         correlateConfidence: confidence,
     });
 
-    // ── Single LLM call ───────────────────────────────────────────────────────
-    const llm = new ChatGoogleGenerativeAI({
-        model: 'gemini-3.5-flash',
-        apiKey: process.env.GEMINI_API_KEY,
-        temperature: 0, // deterministic — structured output, not creative writing
-    });
-
+    // ── Single LLM call with retry and model fallback ────────────────────────
     let rawText: string;
     try {
-        const response = await llm.invoke([
+        const response = await invokeLlmWithRetryAndFallback([
             new SystemMessage(systemPrompt),
             new HumanMessage('Produce the JSON RCA output now.'),
-        ]);
+        ], { temperature: 0, responseMimeType: 'application/json' });
 
         rawText =
             typeof response.content === 'string'

@@ -24,41 +24,40 @@ const __dirname = path.dirname(__filename);
 // __dirname = packages/agent/chroma, so we walk up 3 levels.
 const RUNBOOKS_DIR = path.resolve(__dirname, "../../../user-files/runbooks");
 
-// Maps each .md filename to its ChromaDB ID and metadata.
-// Add a new entry here whenever a new runbook file is created.
-const RUNBOOK_REGISTRY: Array<{
-    file: string; // filename inside /runbooks
-    chromaId: string; // stable ID, also stored in PostgreSQL runbooks.chroma_id
-    title: string;
-    serviceName?: string;
-}> = [
-    {
-        file: "cpu-spike.md",
-        chromaId: "runbook-cpu-spike",
-        title: "High CPU Usage — Investigation Runbook",
-    },
-    {
-        file: "db-connection-exhaustion.md",
-        chromaId: "runbook-db-connection-exhaustion",
-        title: "Database Connection Exhaustion — Investigation Runbook",
-        serviceName: "postgresql",
-    },
-    {
-        file: "memory-pressure.md",
-        chromaId: "runbook-memory-pressure",
-        title: "Memory Pressure — Investigation Runbook",
-    },
-];
-
 function loadRunbooks(): RunbookDocument[] {
-    return RUNBOOK_REGISTRY.map(({ file, chromaId, title, serviceName }) => {
-        const filePath = path.join(RUNBOOKS_DIR, file);
+    const files = fs.readdirSync(RUNBOOKS_DIR);
+    const mdFiles = files.filter((f) => f.endsWith(".md"));
 
-        if (!fs.existsSync(filePath)) {
-            throw new Error(`Runbook file not found: ${filePath}`);
+    return mdFiles.map((file) => {
+        const filePath = path.join(RUNBOOKS_DIR, file);
+        const content = fs.readFileSync(filePath, "utf-8");
+
+        // 1. Deriving chromaId from the filename (replace underscores with dashes, remove extension)
+        const nameWithoutExt = path.basename(file, ".md");
+        const chromaId = `runbook-${nameWithoutExt.replace(/_/g, "-")}`;
+
+        // 2. Extract title from the first Markdown heading '# '
+        const titleMatch = content.match(/^#\s+(.+)$/m);
+        let title = nameWithoutExt;
+        if (titleMatch && titleMatch[1]) {
+            title = titleMatch[1].replace(/^(?:SRE\s+)?Runbook:\s*/i, "").trim();
         }
 
-        const content = fs.readFileSync(filePath, "utf-8");
+        // 3. Extract serviceName if there is exactly one known service under Topology Component
+        let serviceName: string | undefined = undefined;
+        const lineMatch = content.match(/^.*\*\*Topology Component:\*\*.*$/mi);
+        if (lineMatch && lineMatch[0]) {
+            const line = lineMatch[0];
+            const knownServices = ["postgresql", "redis", "api_service", "nginx"];
+            const matchedServices = knownServices.filter((svc) => {
+                const regex = new RegExp(`\`${svc}\``, "i");
+                return regex.test(line);
+            });
+            if (matchedServices.length === 1) {
+                serviceName = matchedServices[0];
+            }
+        }
+
         return { chromaId, title, serviceName, content };
     });
 }
