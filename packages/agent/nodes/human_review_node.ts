@@ -29,9 +29,9 @@ export async function human_review_node(
 ): Promise<Partial<typeof AgentStateSchema.State>> {
     const { incidentId, humanDecision } = state;
 
-    // ── Phase 2: Resume after human decision ─────────────────────────────────
+    // ── Phase 2: Resume after human decision (bypassing Phase 1 DM sending) ────
     if (humanDecision !== null) {
-        nodeLogger.info({ incidentId, humanDecision }, 'human_review_node: resuming with decision');
+        nodeLogger.info({ incidentId, humanDecision }, 'human_review_node: Phase 2 — resumed with decision');
         if (humanDecision === 'dismissed') {
             await dismissIncident(incidentId);
         }
@@ -67,10 +67,16 @@ export async function human_review_node(
     }
 
     // Suspends here — LangGraph checkpoints state and throws GraphInterrupt.
-    // The node re-enters at the top when graph.invoke() is called again by
-    // the /slack/interactions route with humanDecision injected.
-    interrupt({ reason: 'awaiting_human_decision', incidentId });
-    return {}; // never reached on Phase 1
+    // When resumed using Command({ resume: decision }), it returns the decision value.
+    const decision = interrupt({ reason: 'awaiting_human_decision', incidentId }) as 'approved' | 'dismissed';
+
+    // Fallback Phase 2 (if humanDecision was not updated prior to executing this node)
+    nodeLogger.info({ incidentId, decision }, 'human_review_node: Phase 2 (fallback) — resumed with decision');
+    if (decision === 'dismissed') {
+        await dismissIncident(incidentId);
+    }
+
+    return { humanDecision: decision };
 }
 
 // ─── dismissIncident ──────────────────────────────────────────────────────────
@@ -107,7 +113,7 @@ async function dismissIncident(incidentId: string): Promise<void> {
 //   Q3       Did we cause it?← state.q3DidWeCauseIt (LLM string)
 //   Q4       What do I do?   ← state.fixSteps[]    (array → numbered list)
 //   Divider
-//   Actions  [✅ Approve — send to #incidents]  [✗ Dismiss]
+//   Actions  [✅ Approve — send to #all-vigil]  [✗ Dismiss]
 
 function buildDmBlocks(state: typeof AgentStateSchema.State): KnownBlock[] {
     const { incidentId, q1WhatBroke, q2WhatCausedIt, q3DidWeCauseIt, fixSteps, runbookChunks } = state;
@@ -171,7 +177,7 @@ function buildDmBlocks(state: typeof AgentStateSchema.State): KnownBlock[] {
             elements: [
                 {
                     type: 'button',
-                    text: { type: 'plain_text', text: '✅ Approve — send to #incidents', emoji: true },
+                    text: { type: 'plain_text', text: '✅ Approve — send to #all-vigil', emoji: true },
                     style: 'primary',
                     value: 'approved',
                     action_id: `approve:${incidentId}`,
@@ -179,7 +185,7 @@ function buildDmBlocks(state: typeof AgentStateSchema.State): KnownBlock[] {
                         title: { type: 'plain_text', text: 'Approve this RCA?' },
                         text: {
                             type: 'mrkdwn',
-                            text: 'This will post the analysis to *#incidents* and mark the incident approved.',
+                            text: 'This will post the analysis to #all-vigil and mark the incident approved.',
                         },
                         confirm: { type: 'plain_text', text: 'Yes, approve' },
                         deny: { type: 'plain_text', text: 'Cancel' },

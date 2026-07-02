@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { logger } from "../shared/index.js";
 import { initAgent, runIncidentAnalysis, graph } from "./graph.js";
 import { verifySlackSignature } from "./slack/client.js";
+import { Command } from "@langchain/langgraph";
 
 // ─── Environment ──────────────────────────────────────────────────────────────
 
@@ -27,6 +28,11 @@ const serverLogger = logger.child({ context: "agent-server" });
 const server = http.createServer((req, res) => {
     const url = req.url ?? "";
     const method = req.method ?? "";
+
+    // Log all incoming requests to help debug webhooks and routing issues
+    if (url !== "/health") {
+        serverLogger.info({ method, url, headers: req.headers }, `Incoming HTTP request: ${method} ${url}`);
+    }
 
     // ── Health check ──────────────────────────────────────────────────────────
     if (method === "GET" && url === "/health") {
@@ -109,6 +115,10 @@ async function handleSlackInteraction(
     const signature = req.headers["x-slack-signature"];
 
     if (typeof timestamp !== "string" || typeof signature !== "string") {
+        serverLogger.warn(
+            { timestamp, signature, headers: req.headers },
+            "/slack/interactions: missing Slack signature headers"
+        );
         res.writeHead(403, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Missing Slack signature headers" }));
         return;
@@ -127,7 +137,10 @@ async function handleSlackInteraction(
     }
 
     if (!isValid) {
-        serverLogger.warn({ timestamp }, "/slack/interactions: invalid or replayed signature — rejected");
+        serverLogger.warn(
+            { timestamp, signature, signingSecretConfigured: !!process.env.SLACK_SIGNING_SECRET },
+            "/slack/interactions: invalid or replayed signature — rejected"
+        );
         res.writeHead(403, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Invalid signature" }));
         return;
@@ -142,8 +155,12 @@ async function handleSlackInteraction(
     // Slack sends: body = "payload=<url-encoded-json>"
     let payload: Record<string, unknown>;
     try {
-        const decoded = decodeURIComponent(rawBody.replace(/^payload=/, ""));
-        payload = JSON.parse(decoded) as Record<string, unknown>;
+        const urlParams = new URLSearchParams(rawBody);
+        const payloadStr = urlParams.get("payload");
+        if (!payloadStr) {
+            throw new Error("Missing payload parameter in request body");
+        }
+        payload = JSON.parse(payloadStr) as Record<string, unknown>;
     } catch (err) {
         serverLogger.error({ err }, "/slack/interactions: failed to parse Slack payload");
         return;
@@ -179,12 +196,56 @@ async function handleSlackInteraction(
 
     serverLogger.info({ incidentId, humanDecision }, "/slack/interactions: resuming graph with decision");
 
+    // ── 6.5 Update Slack message to hide actions ──────────────────────────────
+    const responseUrl = payload.response_url as string | undefined;
+    const originalMessage = payload.message as Record<string, any> | undefined;
+    const slackUser = payload.user as { id?: string; name?: string } | undefined;
+
+    if (responseUrl && originalMessage?.blocks) {
+        const userId = slackUser?.id;
+        const userMention = userId ? ` by <@${userId}>` : "";
+        const statusText = humanDecision === "approved"
+            ? `✅ *Approved*${userMention}`
+            : `✗ *Dismissed*${userMention}`;
+
+        // Replace the actions block with the status text block
+        const updatedBlocks = originalMessage.blocks
+            .filter((block: any) => block.type !== "actions")
+            .concat({
+                type: "context",
+                elements: [
+                    {
+                        type: "mrkdwn",
+                        text: statusText,
+                    },
+                ],
+            });
+
+        fetch(responseUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                text: originalMessage.text,
+                blocks: updatedBlocks,
+                replace_original: true,
+            }),
+        }).catch((err) => {
+            serverLogger.error(
+                { err: err instanceof Error ? err.message : String(err), incidentId },
+                "/slack/interactions: failed to update original message to hide buttons"
+            );
+        });
+    }
+
     // ── 7. Resume graph — fire and forget ────────────────────────────────────
-    // graph.invoke() with the same thread_id resumes from the checkpointed state,
-    // re-entering human_review_node at Phase 2 with humanDecision injected.
+    // graph.invoke() with the Command class resumes execution from the paused interrupt()
+    // call inside human_review_node, while updating the humanDecision state.
     graph
         .invoke(
-            { humanDecision },
+            new Command({
+                resume: humanDecision,
+                update: { humanDecision }
+            }),
             { configurable: { thread_id: incidentId } }
         )
         .then(() => {

@@ -64,7 +64,10 @@ describe("parseTopology", () => {
         const api = graph.services.get("api_service");
         expect(api).toBeDefined();
         expect(api!.displayName).toBe("Node.js API");
-        expect(api!.dependsOn).toEqual(["postgresql", "redis"]);
+        expect(api!.dependsOn).toEqual([
+            { serviceId: "postgresql" },
+            { serviceId: "redis" },
+        ]);
         expect(api!.prometheusLabels).toEqual({ job: "node_api", service: "api" });
 
         const pg = graph.services.get("postgresql");

@@ -23,7 +23,7 @@ export async function notify_node(
 ): Promise<Partial<typeof AgentStateSchema.State>> {
     const { incidentId } = state;
 
-    nodeLogger.info({ incidentId }, 'notify_node: posting approved RCA to #incidents');
+    nodeLogger.info({ incidentId }, 'notify_node: posting approved RCA to #all-vigil');
 
     const channel = process.env.SLACK_INCIDENTS_CHANNEL ?? 'C0000000000';
 

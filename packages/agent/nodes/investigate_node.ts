@@ -1,8 +1,8 @@
 import { AgentStateSchema } from '../agentStateSchema.js';
 import { logger } from '../../shared/index.js';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { HumanMessage, SystemMessage, AIMessage, ToolMessage } from '@langchain/core/messages';
 import type { StructuredToolInterface } from '@langchain/core/tools';
+import { invokeLlmWithRetryAndFallback } from '../llm.js';
 import {
     queryPrometheusRangeTool,
     queryRelatedMetricsTool,
@@ -61,12 +61,7 @@ export async function investigate_node(
         makeGetBlastRadiusTool(topology ?? null),
     ];
 
-    // ── Initialise Gemini with tools bound ───────────────────────────────────
-    const llm = new ChatGoogleGenerativeAI({
-        model: 'gemini-3.5-flash',
-        apiKey: process.env.GEMINI_API_KEY,
-        temperature: 0, // deterministic — we want evidence, not creativity
-    }).bindTools(tools);
+    // LLM is initialized dynamically with retries and fallback models during the investigation loop.
 
     // ── Build system prompt ───────────────────────────────────────────────────
     const timelineText =
@@ -146,7 +141,7 @@ Do NOT include the format tags in your tool calls. Only write the findings block
         iterations++;
         nodeLogger.info({ iteration: iterations }, 'investigate_node: LLM iteration');
 
-        const response = (await llm.invoke(messages)) as AIMessage;
+        const response = (await invokeLlmWithRetryAndFallback(messages, { tools, temperature: 0 })) as AIMessage;
         messages.push(response);
 
         // ── Check if LLM wants to call tools ─────────────────────────────────
