@@ -1,6 +1,6 @@
-version: "3.8"
-
 services:
+    # ── Infrastructure ─────────────────────────────────────────────────────────
+
     db:
         image: postgres:15-alpine
         container_name: vigil_postgres
@@ -10,9 +10,14 @@ services:
             POSTGRES_PASSWORD: admin
             POSTGRES_DB: vigil
         ports:
-            - "5433:5432"
+            - '5433:5432'
         volumes:
             - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U docker -d vigil']
+            interval: 5s
+            timeout: 5s
+            retries: 5
 
     chroma:
         image: chromadb/chroma:1.5.8
@@ -21,9 +26,75 @@ services:
         environment:
             - ALLOW_RESET=true # only needed for test teardown — disable in prod
         ports:
-            - "8000:8000"
+            - '8000:8000'
         volumes:
             - chroma_data:/chroma/chroma
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'bash',
+                    '-c',
+                    "exec 3<>/dev/tcp/127.0.0.1/8000 && echo -e 'GET /api/v2/heartbeat HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'",
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+
+    # ── Application ────────────────────────────────────────────────────────────
+
+    agent:
+        build:
+            context: .
+            dockerfile: packages/agent/Dockerfile
+        container_name: vigil_agent
+        restart: unless-stopped
+        environment:
+            - DATABASE_URL=postgresql://docker:admin@db:5432/vigil
+            - CHROMA_URL=http://chroma:8000
+            - NODE_ENV=production
+            - AGENT_PORT=3001
+            - GEMINI_API_KEY=${GEMINI_API_KEY}
+            # Prometheus runs on the Mac host — host.docker.internal resolves to the host from inside Docker
+            - PROMETHEUS_QUERY_URL=http://host.docker.internal:9090/api/v1/query
+            - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+            - SLACK_ONCALL_USER_ID=${SLACK_ONCALL_USER_ID}
+            - SLACK_INCIDENTS_CHANNEL=${SLACK_INCIDENTS_CHANNEL}
+            - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
+        ports:
+            - '3001:3001'
+        depends_on:
+            db:
+                condition: service_healthy
+            chroma:
+                condition: service_healthy
+        healthcheck:
+            test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3001/health || exit 1']
+            interval: 10s
+            timeout: 5s
+            retries: 3
+        volumes:
+            - ./packages/agent:/app/packages/agent
+            - ./packages/shared:/app/packages/shared
+
+    api:
+        build:
+            context: .
+            dockerfile: packages/api/Dockerfile
+        container_name: vigil_api
+        restart: unless-stopped
+        environment:
+            - DATABASE_URL=postgresql://docker:admin@db:5432/vigil
+            - AGENT_URL=http://agent:3001
+            - NODE_ENV=production
+            - PORT=8080
+        ports:
+            - '8080:8080'
+        depends_on:
+            db:
+                condition: service_healthy
+            agent:
+                condition: service_healthy
 
 volumes:
     postgres_data:
