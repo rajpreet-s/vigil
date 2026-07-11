@@ -1,0 +1,70 @@
+{
+    "id": "tc_ghost_incident",
+    "scenario": "ghost_incident",
+    "description": "Payment GW latency + Kafka crash (ghost/no topology) + Redis down (topology) — agent blind-spot stress test",
+    "anomalies": [
+        {
+            "metric_name": "p99_latency_ms",
+            "service_name": "payment_gateway",
+            "severity": "WARNING",
+            "offset_seconds": 0,
+            "raw_payload": {
+                "alertname": "PaymentGatewayHighLatency",
+                "value": "8200",
+                "threshold": "2000"
+            }
+        },
+        {
+            "metric_name": "service_up",
+            "service_name": "kafka_broker",
+            "severity": "CRITICAL",
+            "offset_seconds": 8,
+            "raw_payload": {
+                "alertname": "KafkaBrokerDown",
+                "value": "0",
+                "threshold": "1"
+            }
+        },
+        {
+            "metric_name": "service_up",
+            "service_name": "redis",
+            "severity": "CRITICAL",
+            "offset_seconds": 18,
+            "raw_payload": {
+                "alertname": "RedisDown",
+                "value": "0",
+                "threshold": "1"
+            }
+        },
+        {
+            "metric_name": "memory_usage_percent",
+            "service_name": "api_service",
+            "severity": "WARNING",
+            "offset_seconds": 30,
+            "raw_payload": {
+                "alertname": "HighMemoryUsage",
+                "value": "89",
+                "threshold": "85"
+            }
+        },
+        {
+            "metric_name": "p99_latency_ms",
+            "service_name": "api_service",
+            "severity": "CRITICAL",
+            "offset_seconds": 40,
+            "raw_payload": {
+                "alertname": "CriticalRequestLatency",
+                "value": "3100",
+                "threshold": "3000"
+            }
+        }
+    ],
+    "deployments": [],
+    "ground_truth": {
+        "root_cause_service": "redis",
+        "affected_services": ["redis", "api_service"],
+        "expected_confidence": "HIGH",
+        "expected_fix_keywords": ["redis", "restart", "ping"],
+        "should_not_mention": ["postgres", "disk", "ssl"]
+    }
+}

@@ -1,0 +1,81 @@
+{
+  "id": "tc_traffic_spike",
+  "scenario": "traffic_spike",
+  "description": "20x inbound traffic spike → Nginx/API CPU saturation → 5xx errors",
+  "anomalies": [
+    {
+      "metric_name": "request_rate",
+      "service_name": "nginx",
+      "severity": "WARNING",
+      "offset_seconds": 0,
+      "raw_payload": {
+        "alertname": "TrafficSpike",
+        "value": "2400",
+        "threshold": "1000"
+      }
+    },
+    {
+      "metric_name": "cpu_usage_percent",
+      "service_name": "nginx",
+      "severity": "WARNING",
+      "offset_seconds": 15,
+      "raw_payload": {
+        "alertname": "HighCPUUsage",
+        "value": "88",
+        "threshold": "80"
+      }
+    },
+    {
+      "metric_name": "cpu_usage_percent",
+      "service_name": "api_service",
+      "severity": "WARNING",
+      "offset_seconds": 25,
+      "raw_payload": {
+        "alertname": "HighCPUUsage",
+        "value": "92",
+        "threshold": "80"
+      }
+    },
+    {
+      "metric_name": "p99_latency_ms",
+      "service_name": "api_service",
+      "severity": "CRITICAL",
+      "offset_seconds": 40,
+      "raw_payload": {
+        "alertname": "CriticalRequestLatency",
+        "value": "5100",
+        "threshold": "5000"
+      }
+    },
+    {
+      "metric_name": "error_rate",
+      "service_name": "api_service",
+      "severity": "CRITICAL",
+      "offset_seconds": 50,
+      "raw_payload": {
+        "alertname": "CriticalHttp5xxRate",
+        "value": "0.32",
+        "threshold": "0.25"
+      }
+    },
+    {
+      "metric_name": "error_rate",
+      "service_name": "nginx",
+      "severity": "CRITICAL",
+      "offset_seconds": 60,
+      "raw_payload": {
+        "alertname": "CriticalHttp5xxRate",
+        "value": "0.35",
+        "threshold": "0.25"
+      }
+    }
+  ],
+  "deployments": [],
+  "ground_truth": {
+    "root_cause_service": "nginx",
+    "affected_services": ["nginx", "api_service"],
+    "expected_confidence": "MEDIUM",
+    "expected_fix_keywords": ["traffic", "requests", "rate", "limit", "scale", "autoscale"],
+    "should_not_mention": ["postgres", "redis", "disk", "ssl", "kafka", "payment"]
+  }
+}

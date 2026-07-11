@@ -1,0 +1,69 @@
+{
+  "id": "tc_db_exhaustion",
+  "scenario": "db_exhaustion",
+  "description": "PostgreSQL connection pool exhausting → API latency spike → Nginx 502 cascade",
+  "anomalies": [
+    {
+      "metric_name": "db_connections",
+      "service_name": "postgresql",
+      "severity": "CRITICAL",
+      "offset_seconds": 0,
+      "raw_payload": {
+        "alertname": "PostgresConnectionPoolExhausted",
+        "value": "98",
+        "threshold": "95"
+      }
+    },
+    {
+      "metric_name": "p99_latency_ms",
+      "service_name": "api_service",
+      "severity": "WARNING",
+      "offset_seconds": 45,
+      "raw_payload": {
+        "alertname": "HighRequestLatency",
+        "value": "4200",
+        "threshold": "1000"
+      }
+    },
+    {
+      "metric_name": "error_rate",
+      "service_name": "api_service",
+      "severity": "CRITICAL",
+      "offset_seconds": 70,
+      "raw_payload": {
+        "alertname": "CriticalHttp5xxRate",
+        "value": "0.42",
+        "threshold": "0.25"
+      }
+    },
+    {
+      "metric_name": "error_rate",
+      "service_name": "nginx",
+      "severity": "CRITICAL",
+      "offset_seconds": 120,
+      "raw_payload": {
+        "alertname": "CriticalHttp5xxRate",
+        "value": "0.30",
+        "threshold": "0.25"
+      }
+    }
+  ],
+  "deployments": [
+    {
+      "service_name": "postgresql",
+      "pr_title": "Optimise connection pools for replica query traffic",
+      "branch": "main",
+      "author": "dev-alice",
+      "commit_sha": "a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4",
+      "files_changed": ["packages/postgresql/config.json"],
+      "offset_seconds": -300
+    }
+  ],
+  "ground_truth": {
+    "root_cause_service": "postgresql",
+    "affected_services": ["postgresql", "api_service", "nginx"],
+    "expected_confidence": "HIGH",
+    "expected_fix_keywords": ["pool", "connections", "pg_stat_activity", "kill", "restart"],
+    "should_not_mention": ["redis", "disk", "ssl", "kafka", "payment"]
+  }
+}

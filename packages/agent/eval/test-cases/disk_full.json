@@ -1,0 +1,58 @@
+{
+    "id": "tc_disk_full",
+    "scenario": "disk_full",
+    "description": "API disk fills to 99% → API pod crashes → Nginx returns 502",
+    "anomalies": [
+        {
+            "metric_name": "disk_usage_percent",
+            "service_name": "api_service",
+            "severity": "CRITICAL",
+            "offset_seconds": 0,
+            "raw_payload": {
+                "alertname": "CriticalDiskUsage",
+                "value": "99",
+                "threshold": "95"
+            }
+        },
+        {
+            "metric_name": "service_up",
+            "service_name": "api_service",
+            "severity": "CRITICAL",
+            "offset_seconds": 35,
+            "raw_payload": {
+                "alertname": "ServiceDown",
+                "value": "0",
+                "threshold": "1"
+            }
+        },
+        {
+            "metric_name": "error_rate",
+            "service_name": "nginx",
+            "severity": "CRITICAL",
+            "offset_seconds": 50,
+            "raw_payload": {
+                "alertname": "CriticalHttp5xxRate",
+                "value": "0.85",
+                "threshold": "0.25"
+            }
+        }
+    ],
+    "deployments": [
+        {
+            "service_name": "api_service",
+            "pr_title": "Add extensive debug logs for webhook transactions",
+            "branch": "main",
+            "author": "dev-charlie",
+            "commit_sha": "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+            "files_changed": ["packages/api_service/server.js", "packages/api_service/logger.js"],
+            "offset_seconds": -900
+        }
+    ],
+    "ground_truth": {
+        "root_cause_service": "api_service",
+        "affected_services": ["api_service", "nginx"],
+        "expected_confidence": "HIGH",
+        "expected_fix_keywords": ["disk", "space", "clean", "delete", "rm", "df"],
+        "should_not_mention": ["postgres", "redis", "ssl", "kafka", "payment"]
+    }
+}
