@@ -19,7 +19,10 @@ export async function invokeLlmWithRetryAndFallback(
     messages: BaseMessage[],
     options: InvokeOptions = {}
 ): Promise<AIMessage> {
-    const models = ['gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];
+    const isEval = process.env.AGENT_EVAL === 'true';
+    const models = isEval
+        ? ['gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash']
+        : ['gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];
     const { temperature = 0, tools, responseMimeType } = options;
     let lastError: any = null;
 

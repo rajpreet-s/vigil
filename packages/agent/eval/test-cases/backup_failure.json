@@ -1,0 +1,26 @@
+{
+  "id": "tc_backup_failure",
+  "scenario": "backup_failure",
+  "description": "Nightly backup last-success timestamp goes stale (>26 h)",
+  "anomalies": [
+    {
+      "metric_name": "backup_job",
+      "service_name": "postgresql",
+      "severity": "WARNING",
+      "offset_seconds": 0,
+      "raw_payload": {
+        "alertname": "BackupJobFailed",
+        "value": "93600",
+        "threshold": "90000"
+      }
+    }
+  ],
+  "deployments": [],
+  "ground_truth": {
+    "root_cause_service": "postgresql",
+    "affected_services": ["postgresql"],
+    "expected_confidence": "MEDIUM",
+    "expected_fix_keywords": ["backup", "cron", "dump", "pg_dump", "s3"],
+    "should_not_mention": ["redis", "nginx", "disk", "ssl", "kafka", "payment"]
+  }
+}

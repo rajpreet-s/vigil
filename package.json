@@ -18,6 +18,7 @@
         "start-agent": "tsx packages/agent/server.ts",
         "start-api": "tsx packages/api/server.ts",
         "slack-test": "tsx packages/agent/slack/test-connection.ts",
+        "agent-eval": "tsx packages/agent/eval/run-eval.ts",
         "docker:up": "docker compose up --build",
         "docker:down": "docker compose down"
     },
@@ -36,6 +37,7 @@
         "@eslint/js": "^10.0.1",
         "@types/js-yaml": "^4.0.9",
         "@types/node": "^25.6.0",
+        "@types/uuid": "^10.0.0",
         "dotenv": "^17.4.0",
         "eslint": "^10.4.0",
         "pino-pretty": "^13.1.3",
@@ -60,6 +62,7 @@
         "js-yaml": "^4.1.1",
         "pg": "^8.20.0",
         "pino": "^10.3.1",
+        "uuid": "^14.0.1",
         "zod": "^4.4.3"
     }
 }

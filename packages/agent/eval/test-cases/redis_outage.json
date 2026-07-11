@@ -1,0 +1,58 @@
+{
+  "id": "tc_redis_outage",
+  "scenario": "redis_outage",
+  "description": "Redis goes offline → API cache-miss storm → memory balloon + latency spike",
+  "anomalies": [
+    {
+      "metric_name": "service_up",
+      "service_name": "redis",
+      "severity": "CRITICAL",
+      "offset_seconds": 0,
+      "raw_payload": {
+        "alertname": "RedisDown",
+        "value": "0",
+        "threshold": "1"
+      }
+    },
+    {
+      "metric_name": "memory_usage_percent",
+      "service_name": "api_service",
+      "severity": "WARNING",
+      "offset_seconds": 30,
+      "raw_payload": {
+        "alertname": "HighMemoryUsage",
+        "value": "88",
+        "threshold": "85"
+      }
+    },
+    {
+      "metric_name": "p99_latency_ms",
+      "service_name": "api_service",
+      "severity": "CRITICAL",
+      "offset_seconds": 50,
+      "raw_payload": {
+        "alertname": "CriticalRequestLatency",
+        "value": "5200",
+        "threshold": "5000"
+      }
+    }
+  ],
+  "deployments": [
+    {
+      "service_name": "redis",
+      "pr_title": "Upgrade Redis cache policy to volatile-lru",
+      "branch": "main",
+      "author": "dev-bob",
+      "commit_sha": "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
+      "files_changed": ["packages/redis/redis.conf"],
+      "offset_seconds": -600
+    }
+  ],
+  "ground_truth": {
+    "root_cause_service": "redis",
+    "affected_services": ["redis", "api_service"],
+    "expected_confidence": "HIGH",
+    "expected_fix_keywords": ["redis", "cache", "restart", "ping", "redis-cli"],
+    "should_not_mention": ["postgres", "disk", "ssl", "kafka", "payment"]
+  }
+}

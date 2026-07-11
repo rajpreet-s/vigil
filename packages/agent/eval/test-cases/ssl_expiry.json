@@ -1,0 +1,26 @@
+{
+  "id": "tc_ssl_expiry",
+  "scenario": "ssl_expiry",
+  "description": "SSL certificate days-to-expiry drops to 3 days (renewal overdue)",
+  "anomalies": [
+    {
+      "metric_name": "ssl_certificate_expiring_soon",
+      "service_name": "nginx",
+      "severity": "CRITICAL",
+      "offset_seconds": 0,
+      "raw_payload": {
+        "alertname": "SSLCertificateCritical",
+        "value": "3",
+        "threshold": "5"
+      }
+    }
+  ],
+  "deployments": [],
+  "ground_truth": {
+    "root_cause_service": "nginx",
+    "affected_services": ["nginx"],
+    "expected_confidence": "MEDIUM",
+    "expected_fix_keywords": ["ssl", "certificate", "renew", "certbot", "nginx"],
+    "should_not_mention": ["postgres", "redis", "disk", "kafka", "payment"]
+  }
+}
