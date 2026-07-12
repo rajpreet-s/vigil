@@ -19,6 +19,7 @@
         "start-api": "tsx packages/api/server.ts",
         "slack-test": "tsx packages/agent/slack/test-connection.ts",
         "agent-eval": "tsx packages/agent/eval/run-eval.ts",
+        "start-frontend": "npm run dev --prefix packages/frontend",
         "docker:up": "docker compose up --build",
         "docker:down": "docker compose down"
     },
