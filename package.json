@@ -9,6 +9,7 @@
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
         "typecheck": "tsc --noEmit",
+        "build": "tsc",
         "db-generate": "prisma generate",
         "db-migrate": "prisma migrate dev",
         "db-reset": "prisma migrate reset",
@@ -19,7 +20,8 @@
         "start-api": "tsx packages/api/server.ts",
         "slack-test": "tsx packages/agent/slack/test-connection.ts",
         "agent-eval": "tsx packages/agent/eval/run-eval.ts",
-        "start-frontend": "npm run dev --prefix packages/frontend",
+        "start-web": "npm run dev --prefix packages/web",
+        "start-app": "npm run dev --prefix packages/app",
         "docker:up": "docker compose up --build",
         "docker:down": "docker compose down"
     },
