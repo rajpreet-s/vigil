@@ -156,7 +156,7 @@ Three font families, each doing one job:
 
 ## 5. Navigation & Layout Principles
 
-- **Honest Navigation**: To reflect a real developer utility rather than a commercial product, the navigation links are strictly limited to: Logo, "How it works", GitHub link, Theme Toggle, and a "Get Started" call-to-action leading directly to the installation instructions. No "Pricing" or "Changelog" placeholders.
+- **Honest Navigation**: To reflect a real developer utility rather than a commercial product, the navigation links are strictly limited to: Logo, "How it works", GitHub link, Theme Toggle, and a "Get Started" call-to-action leading directly to the SRE Incident Command Dashboard login page (`/app/#/login` in production or `http://localhost:5174/#/login` in development). No "Pricing" or "Changelog" placeholders.
 - **Grid System**: 12-column responsive layout, constrained to a `1200px` maximum width. Left-aligned typography in the hero with a balanced vertical layout.
 - **Section Spacing**: Direct desktop padding of `96px` (`section-desktop`) and mobile padding of `48px` (`section-mobile`) to give code blocks and copy ample breathing room.
 

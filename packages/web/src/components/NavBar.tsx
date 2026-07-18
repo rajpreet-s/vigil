@@ -30,11 +30,12 @@ export default function NavBar() {
     setIsDark((prev) => !prev);
   };
 
-  const handleScrollToInstall = () => {
+  const handleGetStarted = () => {
     setMobileOpen(false);
-    const el = document.getElementById('install');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      window.location.href = 'http://localhost:5175/login';
+    } else {
+      window.location.href = '/app/login';
     }
   };
 
@@ -80,7 +81,7 @@ export default function NavBar() {
           </button>
 
           <button
-            onClick={handleScrollToInstall}
+            onClick={handleGetStarted}
             className="bg-on-surface text-background px-lg py-sm rounded-lg font-bold hover:opacity-90 transition-all text-sm shadow-sm"
           >
             Get Started

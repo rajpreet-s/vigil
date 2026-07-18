@@ -10,6 +10,7 @@ export default async function rootRoutes(fastify: FastifyInstance) {
         "/health",
         {
             schema: {
+                tags: ["System"],
                 description: "System diagnostics and database connection health probe.",
                 response: {
                     200: {

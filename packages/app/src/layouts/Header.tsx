@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Sparkles, RefreshCw, Settings, Wifi, WifiOff } from 'lucide-react';
+import { Sparkles, RefreshCw, Settings } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const Header: React.FC = () => {

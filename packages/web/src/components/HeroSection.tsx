@@ -1,8 +1,9 @@
 export default function HeroSection() {
-    const handleScrollToInstall = () => {
-        const el = document.getElementById('install');
-        if (el) {
-            el.scrollIntoView({ behavior: 'smooth' });
+    const handleGetStarted = () => {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            window.location.href = 'http://localhost:5175/login';
+        } else {
+            window.location.href = '/app/login';
         }
     };
     return (
@@ -47,7 +48,7 @@ export default function HeroSection() {
                     {/* CTAs */}
                     <div className="flex flex-col sm:flex-row gap-md sm:items-start items-center">
                         <button 
-                            onClick={handleScrollToInstall}
+                            onClick={handleGetStarted}
                             className="bg-primary-container text-on-primary-container px-xl py-md rounded-lg font-bold hover:brightness-110 transition-all flex items-center gap-sm shadow-lg shadow-primary-container/20 w-full sm:w-auto justify-center"
                         >
                             Get Started
