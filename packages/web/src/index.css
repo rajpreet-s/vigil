@@ -45,39 +45,196 @@
   100% { background-position: 200% center; }
 }
 
-/* ── Hero ambient glow ────────────────────────────────── */
-.hero-glow-element {
-  background: radial-gradient(
-    circle,
-    rgba(242, 169, 59, 0.25),
-    rgba(194, 86, 15, 0.1) 45%,
-    transparent 70%
+/* ── Theme variables for custom backgrounds ───────────── */
+:root {
+  --background: #0c0e13;
+  --surface: #111318;
+  --primary-glow: rgba(255, 202, 133, 0.45);  /* Boosted gold */
+  --secondary-glow: rgba(242, 169, 59, 0.35); /* Boosted copper */
+  --tertiary-glow: rgba(235, 94, 40, 0.25);   /* Boosted deep red-orange */
+  --grid-color: rgba(158, 142, 124, 0.05);
+  --noise-opacity: 0.02;
+}
+
+html:not(.dark) {
+  --background: #f7f6f2; /* Warm premium Sand/Alabaster */
+  --surface: #eae8e3;
+  --primary-glow: rgba(242, 169, 59, 0.24);  /* Boosted gold contrast */
+  --secondary-glow: rgba(255, 182, 146, 0.2);  /* Boosted warm rose/gold */
+  --tertiary-glow: rgba(235, 94, 40, 0.14);   /* Boosted amber */
+  --grid-color: rgba(81, 69, 53, 0.08);
+  --noise-opacity: 0.015;
+}
+
+/* ── Lantern Backdrop & Grid Mesh ─────────────────────── */
+.lantern-bg {
+  position: relative;
+  background-color: var(--background);
+  transition: background-color 0.5s ease;
+}
+
+/* Grid mesh overlay */
+.lantern-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Grain/noise texture */
+.lantern-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: var(--noise-opacity);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Moving Liquid Glass Backdrop System */
+.liquid-glass-container {
+  position: absolute;
+  inset: 0;
+  filter: blur(55px) saturate(150%);
+  opacity: 0.95;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.liquid-blob {
+  position: absolute;
+  mix-blend-mode: screen;
+  will-change: transform, border-radius;
+}
+
+html:not(.dark) .liquid-blob {
+  mix-blend-mode: multiply;
+  opacity: 0.45;
+}
+
+.liquid-blob-1 {
+  width: 650px;
+  height: 650px;
+  top: -15%;
+  left: 15%;
+  background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+  animation: liquidMorph1 18s infinite ease-in-out alternate;
+}
+
+.liquid-blob-2 {
+  width: 700px;
+  height: 700px;
+  bottom: -20%;
+  right: 5%;
+  background: radial-gradient(circle, var(--secondary-glow) 0%, transparent 70%);
+  animation: liquidMorph2 22s infinite ease-in-out alternate;
+}
+
+.liquid-blob-3 {
+  width: 550px;
+  height: 550px;
+  top: 20%;
+  right: 25%;
+  background: radial-gradient(circle, var(--tertiary-glow) 0%, transparent 70%);
+  animation: liquidMorph3 16s infinite ease-in-out alternate-reverse;
+}
+
+@keyframes liquidMorph1 {
+  0% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+  }
+  33% {
+    transform: translate(120px, -80px) scale(1.2) rotate(120deg);
+    border-radius: 70% 30% 52% 48% / 60% 40% 60% 40%;
+  }
+  66% {
+    transform: translate(-80px, 60px) scale(0.85) rotate(240deg);
+    border-radius: 48% 52% 30% 70% / 40% 60% 40% 60%;
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1) rotate(360deg);
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+  }
+}
+
+@keyframes liquidMorph2 {
+  0% {
+    transform: translate(0px, 0px) scale(1.1) rotate(360deg);
+    border-radius: 70% 30% 52% 48% / 60% 40% 60% 40%;
+  }
+  50% {
+    transform: translate(-100px, 80px) scale(0.9) rotate(180deg);
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1.1) rotate(0deg);
+    border-radius: 70% 30% 52% 48% / 60% 40% 60% 40%;
+  }
+}
+
+@keyframes liquidMorph3 {
+  0% {
+    transform: translate(0px, 0px) scale(0.92) rotate(0deg);
+    border-radius: 48% 52% 30% 70% / 40% 60% 40% 60%;
+  }
+  50% {
+    transform: translate(80px, -60px) scale(1.15) rotate(180deg);
+    border-radius: 70% 30% 52% 48% / 60% 40% 60% 40%;
+  }
+  100% {
+    transform: translate(0px, 0px) scale(0.92) rotate(360deg);
+    border-radius: 48% 52% 30% 70% / 40% 60% 40% 60%;
+  }
+}
+
+/* Specular reflection on glass overlay */
+.glass-specular-sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(255, 255, 255, 0.008) 60%,
+    rgba(255, 255, 255, 0.015) 100%
   );
-  filter: blur(60px);
-  animation: glowBreathing 12s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
 }
 
-@keyframes glowBreathing {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50%       { opacity: 1;   transform: scale(1.1); }
+html:not(.dark) .glass-specular-sheen {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(255, 255, 255, 0) 45%,
+    rgba(242, 169, 59, 0.04) 70%,
+    rgba(255, 255, 255, 0.15) 100%
+  );
 }
 
-/* ── Feature card border breathe ─────────────────────── */
+/* ── Feature card & glassmorphic adjustments ──────────── */
 .feature-card {
   position: relative;
   transition: all 0.3s ease;
-  box-shadow: 0 0 0 1px rgba(158, 142, 124, 0.2);
-  animation: borderBreathe 6s ease-in-out infinite;
+  box-shadow: 0 0 0 1px rgba(158, 142, 124, 0.15);
+  animation: borderBreathe 7s ease-in-out infinite;
 }
 
 @keyframes borderBreathe {
   0%, 100% {
-    box-shadow: 0 0 0 1px rgba(158, 142, 124, 0.2), 0 0 0 0 rgba(242, 169, 59, 0);
-    border-color: rgba(81, 69, 53, 1);
+    box-shadow: 0 0 0 1px rgba(158, 142, 124, 0.15);
+    border-color: rgba(81, 69, 53, 0.5);
   }
   50% {
-    box-shadow: 0 0 0 1px rgba(242, 169, 59, 0.4), 0 0 15px 0 rgba(242, 169, 59, 0.1);
-    border-color: rgba(242, 169, 59, 0.6);
+    box-shadow: 0 0 0 1px rgba(242, 169, 59, 0.3), 0 4px 20px -2px rgba(242, 169, 59, 0.05);
+    border-color: rgba(242, 169, 59, 0.4);
   }
 }
 
