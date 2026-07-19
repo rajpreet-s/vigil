@@ -2,19 +2,12 @@ import React, { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import VigilLogo from '../../../components/ui/VigilLogo';
 
-interface LoginProps {
-    onLogin: () => void;
-}
-
-export const Login: React.FC<LoginProps> = ({ onLogin }) => {
+export const Login: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     const handleGoogleLogin = () => {
         setIsLoading(true);
-        setTimeout(() => {
-            setIsLoading(false);
-            onLogin();
-        }, 1200);
+        window.location.href = '/api/auth/google';
     };
 
     return (

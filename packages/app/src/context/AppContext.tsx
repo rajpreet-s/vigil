@@ -6,6 +6,13 @@ interface ToastState {
   type: 'success' | 'warning' | 'error';
 }
 
+export interface UserInfo {
+  id: string;
+  email: string;
+  name: string | null;
+  picture: string | null;
+}
+
 interface AppContextType {
   incidents: Incident[];
   selectedIncidentId: string;
@@ -25,6 +32,8 @@ interface AppContextType {
   kbResults: { doc: string; score: number; file: string }[];
   isSearchingKb: boolean;
   toast: ToastState | null;
+  user: UserInfo | null;
+  setUser: (user: UserInfo | null) => void;
   
   // Actions
   setFilterSeverity: (val: 'all' | 'critical' | 'warning') => void;
@@ -112,6 +121,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Toast banner
   const [toast, setToast] = useState<ToastState | null>(null);
+
+  // User Profile details
+  const [user, setUser] = useState<UserInfo | null>(null);
 
   const selectedIncident = incidents.find(i => i.id === selectedIncidentId) || null;
 
@@ -256,6 +268,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         kbResults,
         isSearchingKb,
         toast,
+        user,
+        setUser,
         
         setFilterSeverity,
         setSelectedIncidentId,

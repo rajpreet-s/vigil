@@ -31,6 +31,10 @@ export default fp(async (fastify) => {
                 {
                     name: "Webhooks",
                     description: "Receivers for external webhooks (e.g., Prometheus Alertmanager, GitHub events)."
+                },
+                {
+                    name: "Authentication",
+                    description: "Google OAuth2 sign-in, session status verification, and logout routes."
                 }
             ],
         },
