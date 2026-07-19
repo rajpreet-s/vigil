@@ -18,6 +18,7 @@
         "chroma-inspect": "tsx packages/agent/chroma/inspect.ts",
         "start-agent": "tsx packages/agent/server.ts",
         "start-api": "tsx packages/api/server.ts",
+        "dev-api": "npm run dev --prefix packages/api",
         "slack-test": "tsx packages/agent/slack/test-connection.ts",
         "agent-eval": "tsx packages/agent/eval/run-eval.ts",
         "start-web": "npm run dev --prefix packages/web",

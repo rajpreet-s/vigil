@@ -140,3 +140,15 @@ model Runbook {
   @@index([service_name])
   @@map("runbooks")
 }
+
+model User {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  googleId  String   @unique @map("google_id")
+  email     String   @unique
+  name      String?
+  picture   String?
+  createdAt DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  @@map("users")
+}

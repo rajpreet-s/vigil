@@ -4,7 +4,7 @@ import { Activity, Network, BookOpen, Cpu, User, LogOut } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const Sidebar: React.FC = () => {
-    const { incidents } = useApp();
+    const { incidents, user, setUser } = useApp();
 
     const activeIncidentsCount = incidents.filter((i) => i.status === 'reviewing').length;
 
@@ -92,18 +92,30 @@ export const Sidebar: React.FC = () => {
             {/* User Card with Logout Button */}
             <div className="p-4 border-t border-surface-container-high/40 bg-surface-container-low/30 flex items-center justify-between">
                 <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="w-9 h-9 rounded-full bg-surface-container-highest flex items-center justify-center text-secondary border border-surface-container-high flex-shrink-0">
-                        <User className="w-4 h-4" />
-                    </div>
+                    {user?.picture ? (
+                        <img 
+                            src={user.picture} 
+                            alt={user.name || 'User Profile'} 
+                            className="w-9 h-9 rounded-full object-cover border border-surface-container-high flex-shrink-0" 
+                        />
+                    ) : (
+                        <div className="w-9 h-9 rounded-full bg-surface-container-highest flex items-center justify-center text-secondary border border-surface-container-high flex-shrink-0">
+                            <User className="w-4 h-4" />
+                        </div>
+                    )}
                     <div className="overflow-hidden">
-                        <p className="text-sm font-semibold text-white truncate">SRE Operator</p>
-                        <p className="text-xs text-secondary truncate">oncall@vigil.local</p>
+                        <p className="text-sm font-semibold text-white truncate">{user?.name || 'SRE Operator'}</p>
+                        <p className="text-xs text-secondary truncate">{user?.email || 'oncall@vigil.local'}</p>
                     </div>
                 </div>
                 <button
-                    onClick={() => {
-                        localStorage.removeItem('vigil_authenticated');
-                        window.location.reload();
+                    onClick={async () => {
+                        try {
+                            await fetch('/api/auth/logout', { method: 'POST' });
+                        } catch (err) {
+                            console.error('Logout request failed', err);
+                        }
+                        setUser(null);
                     }}
                     title="Sign Out"
                     className="text-secondary hover:text-status-critical p-2 rounded-lg hover:bg-surface-container-high/40 transition-colors flex-shrink-0"

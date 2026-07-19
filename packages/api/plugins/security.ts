@@ -17,14 +17,16 @@ export default fp(async (fastify) => {
         },
     });
 
-    // Register CORS with configurable origin
-    const corsOrigin = process.env.CORS_ORIGIN || "*";
+    // Register CORS with configurable origin and support for session cookies
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5174";
+    const corsOrigin = process.env.CORS_ORIGIN || frontendUrl;
     
-    fastify.log.info(`Registering CORS with origin restriction: ${corsOrigin}`);
+    fastify.log.info(`Registering CORS with origin: ${corsOrigin}`);
     
     await fastify.register(cors, {
         origin: corsOrigin === "*" ? true : corsOrigin,
-        methods: ["GET", "POST", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization"],
+        credentials: true,
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
     });
 });
