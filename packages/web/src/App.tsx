@@ -31,7 +31,7 @@ export default function App() {
     }, []);
 
     return (
-        <div className="dark bg-background text-on-surface selection:bg-primary-container selection:text-on-primary-container min-h-screen">
+        <div className="bg-background text-on-surface selection:bg-primary-container selection:text-on-primary-container min-h-screen">
             <NavBar />
             <main>
                 <HeroSection />

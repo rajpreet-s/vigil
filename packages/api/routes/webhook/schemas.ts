@@ -6,6 +6,7 @@ import type { FastifySchema } from "fastify";
  * serialization and request validation before handlers are executed.
  */
 export const alertmanagerWebhookSchema: FastifySchema = {
+    tags: ["Webhooks"],
     body: {
         type: "object",
         required: ["alerts"],
@@ -63,6 +64,7 @@ export const alertmanagerWebhookSchema: FastifySchema = {
 };
 
 export const githubWebhookSchema: FastifySchema = {
+    tags: ["Webhooks"],
     body: {
         type: "object",
         required: ["commits", "ref"],
