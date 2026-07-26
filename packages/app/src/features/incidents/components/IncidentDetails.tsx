@@ -90,37 +90,9 @@ export const IncidentDetails: React.FC = () => {
                             CONFIDENCE {selectedIncident.confidence}%
                         </Badge>
                     </div>
-                    <p className="text-xs text-white/90 leading-relaxed mb-4">
-                        {selectedIncident.id === 'inc-9283' ? (
-                            <>
-                                Vigil isolated connection pool depletion on{' '}
-                                <code className="bg-surface-container-lowest px-1 rounded text-primary font-mono text-[10px]">
-                                    postgres-db-prod
-                                </code>
-                                . Analysis of service logs and topology shows a latency spike
-                                propagation from{' '}
-                                <code className="bg-surface-container-lowest px-1 rounded text-primary font-mono text-[10px]">
-                                    api-service
-                                </code>{' '}
-                                caused by database query thread locks. Runbook guidelines suggest
-                                pool size recycling.
-                            </>
-                        ) : selectedIncident.id === 'inc-9279' ? (
-                            <>
-                                Redis cluster replica lag crossed the 5-second SLA limits. Causal
-                                reachability path check indicates an active write buffering delay on
-                                the target database nodes. Disk metrics check isolated replica write
-                                locks. Recommendation: Restart target replica caches.
-                            </>
-                        ) : (
-                            <>
-                                Ingestion analysis complete. Critical gateway latency storm is
-                                isolated to service configuration bounds. Causal propagation
-                                indicates database connection pool exhaustion back-pressure.
-                                Recommend expansion of pool limits and recycling degraded instances.
-                            </>
-                        )}
-                    </p>
+                    <div className="text-xs text-white/90 leading-relaxed mb-4 whitespace-pre-wrap font-sans">
+                        {selectedIncident.suspectedRootCause || 'No RCA conclusion generated yet for this incident context.'}
+                    </div>
                     <div className="flex flex-wrap items-center gap-2 border-t border-surface-container-high/20 pt-3">
                         <span className="text-[10px] text-secondary/60 font-mono uppercase">
                             Impacted services:

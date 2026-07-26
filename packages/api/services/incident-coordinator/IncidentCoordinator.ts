@@ -219,6 +219,7 @@ export class IncidentCoordinator {
                 id: incidentId,
                 thread_id: incidentId,
                 status: 'OPEN',
+                org_id: anomaly.org_id,
                 services_affected: [anomaly.service_name],
                 blast_radius: [anomaly.service_name],
                 started_at: anomaly.detected_at,

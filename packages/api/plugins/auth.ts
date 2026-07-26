@@ -8,6 +8,8 @@ export interface UserPayload {
     email: string;
     name: string | null;
     picture: string | null;
+    org_id: string | null;
+    org_role: string | null;
 }
 
 // Extend TypeScript typings for Fastify instance and request

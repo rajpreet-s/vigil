@@ -22,31 +22,75 @@ enum IncidentStatus {
   FAILED
 }
 
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Organization {
+  id         String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String               @db.VarChar(255)
+  slug       String               @unique @db.VarChar(100)
+  api_key    String               @unique @db.VarChar(64)
+  created_at DateTime             @default(now()) @db.Timestamptz
+  updated_at DateTime             @updatedAt @db.Timestamptz
+
+  members       OrganizationMember[]
+  services      Service[]
+  anomalies     Anomaly[]
+  incidents     Incident[]
+  topology      Topology[]
+  deploy_events DeployEvent[]
+  runbooks      Runbook[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  org_id    String       @db.Uuid
+  user_id   String       @db.Uuid
+  role      OrgRole      @default(MEMBER)
+  joined_at DateTime     @default(now()) @db.Timestamptz
+
+  org  Organization @relation(fields: [org_id], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([org_id, user_id])
+  @@map("organization_members")
+}
+
 model Service {
-  id                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                 String               @unique @db.VarChar(255)
-  display_name         String?              @db.VarChar(255)
-  created_at           DateTime             @default(now()) @db.Timestamptz // non-nullable
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String        @unique @db.VarChar(255)
+  display_name String?       @db.VarChar(255)
+  created_at   DateTime      @default(now()) @db.Timestamptz // non-nullable
+  org_id       String?       @db.Uuid @map("org_id")
+  org          Organization? @relation(fields: [org_id], references: [id])
   // Relations
-  anomalies            Anomaly[]
+  anomalies    Anomaly[]
 
   @@map("services")
 }
 
 model Anomaly {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  metric_name  String    @db.VarChar(255)
-  service_name String    @db.VarChar(255)
-  service      Service   @relation(fields: [service_name], references: [name])
-  severity     Severity  @default(WARNING)
-  detected_at  DateTime  @db.Timestamptz
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  metric_name  String        @db.VarChar(255)
+  service_name String        @db.VarChar(255)
+  service      Service       @relation(fields: [service_name], references: [name])
+  severity     Severity      @default(WARNING)
+  detected_at  DateTime      @db.Timestamptz
   raw_payload  Json
-  incident_id  String?   @db.Uuid
-  incident     Incident? @relation(fields: [incident_id], references: [id])
-  processed    Boolean   @default(false)
+  incident_id  String?       @db.Uuid
+  incident     Incident?     @relation(fields: [incident_id], references: [id])
+  processed    Boolean       @default(false)
+  org_id       String?       @db.Uuid @map("org_id")
+  org          Organization? @relation(fields: [org_id], references: [id])
 
   @@unique([metric_name, service_name, detected_at])
   @@index([processed])
+  @@index([org_id])
   @@map("anomalies")
 }
 
@@ -54,6 +98,8 @@ model Incident {
   id                 String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   thread_id          String         @unique @db.Uuid // LangGraph checkpoint ID (same as id)
   status             IncidentStatus @default(OPEN)
+  org_id             String?        @db.Uuid @map("org_id")
+  org                Organization?  @relation(fields: [org_id], references: [id])
   
   // Affiliation
   services_affected  String[]       // Grows as anomalies arrive
@@ -90,6 +136,7 @@ model Incident {
   // Relations
   anomalies          Anomaly[]
 
+  @@index([org_id, started_at])
   @@map("incidents")
 }
 
@@ -97,31 +144,37 @@ model Incident {
 // Each row is one directed edge: upstream_service → downstream_service.
 // The correlate_node reads this at runtime to determine causal direction.
 model Topology {
-  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  upstream_service   String   @db.VarChar(255) // e.g. "postgresql"
-  downstream_service String   @db.VarChar(255) // e.g. "api_service"
-  display_name       String?  @db.VarChar(255)
-  description        String? // optional human note: "API reads DB on every request"
-  created_at         DateTime @default(now()) @db.Timestamptz
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  upstream_service   String        @db.VarChar(255) // e.g. "postgresql"
+  downstream_service String        @db.VarChar(255) // e.g. "api_service"
+  display_name       String?       @db.VarChar(255)
+  description        String?       // optional human note: "API reads DB on every request"
+  created_at         DateTime      @default(now()) @db.Timestamptz
+  org_id             String?       @db.Uuid @map("org_id")
+  org                Organization? @relation(fields: [org_id], references: [id])
 
   @@unique([upstream_service, downstream_service])
   @@index([downstream_service]) // look up "what does api_service depend on?"
+  @@index([org_id])
   @@map("topology")
 }
 
 // Records deploy events ingested from GitHub webhooks
 // The fetch_node and correlate_node surface these near the first_bad_timestamp.
 model DeployEvent {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  service_name  String   @db.VarChar(255) // derived from changed directory
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  service_name  String        @db.VarChar(255) // derived from changed directory
   pr_title      String?
-  branch        String   @db.VarChar(255)
-  author        String   @db.VarChar(255)
-  commit_sha    String   @db.VarChar(40)
-  files_changed Json     @default("[]") // String[] of affected paths
-  deployed_at   DateTime @db.Timestamptz // time of the push/merge event
+  branch        String        @db.VarChar(255)
+  author        String        @db.VarChar(255)
+  commit_sha    String        @db.VarChar(40)
+  files_changed Json          @default("[]") // String[] of affected paths
+  deployed_at   DateTime      @db.Timestamptz // time of the push/merge event
+  org_id        String?       @db.Uuid @map("org_id")
+  org           Organization? @relation(fields: [org_id], references: [id])
 
   @@index([service_name, deployed_at])
+  @@index([org_id])
   @@map("deploy_events")
 }
 
@@ -129,26 +182,30 @@ model DeployEvent {
 // ChromaDB holds the vector embeddings; this table holds queryable metadata
 // for the React runbook management UI
 model Runbook {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  chroma_id    String   @unique @db.VarChar(255) // ChromaDB document ID
-  title        String   @db.VarChar(255)
-  service_name String?  @db.VarChar(255) // null = applies to all services
-  file_path    String? // original Markdown file path, for re-ingestion
-  created_at   DateTime @default(now()) @db.Timestamptz
-  updated_at   DateTime @updatedAt @db.Timestamptz
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  chroma_id    String        @unique @db.VarChar(255) // ChromaDB document ID
+  title        String        @db.VarChar(255)
+  service_name String?       @db.VarChar(255) // null = applies to all services
+  file_path    String?       // original Markdown file path, for re-ingestion
+  created_at   DateTime      @default(now()) @db.Timestamptz
+  updated_at   DateTime      @updatedAt @db.Timestamptz
+  org_id       String?       @db.Uuid @map("org_id")
+  org          Organization? @relation(fields: [org_id], references: [id])
 
   @@index([service_name])
+  @@index([org_id])
   @@map("runbooks")
 }
 
 model User {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  googleId  String   @unique @map("google_id")
-  email     String   @unique
-  name      String?
-  picture   String?
-  createdAt DateTime @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  id          String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  googleId    String               @unique @map("google_id")
+  email       String               @unique
+  name        String?
+  picture     String?
+  createdAt   DateTime             @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime             @updatedAt @db.Timestamptz @map("updated_at")
+  memberships OrganizationMember[]
 
   @@map("users")
 }
