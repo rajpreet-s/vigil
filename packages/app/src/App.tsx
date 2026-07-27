@@ -6,6 +6,7 @@ import { IncidentsMonitor } from './features/incidents/components/IncidentsMonit
 import { TopologyGraph } from './features/topology/components/TopologyGraph';
 import { RunbookSearch } from './features/runbooks/components/RunbookSearch';
 import { EvalSuite } from './features/evals/components/EvalSuite';
+import { OnboardingWizard } from './features/onboarding/components/OnboardingWizard';
 import { Login } from './features/auth/components/Login';
 
 function AppContent() {
@@ -69,6 +70,7 @@ function AppContent() {
                     <Route path="topology" element={<TopologyGraph />} />
                     <Route path="runbooks" element={<RunbookSearch />} />
                     <Route path="evals" element={<EvalSuite />} />
+                    <Route path="onboarding" element={<OnboardingWizard />} />
 
                     {/* Catch-all redirect to incidents */}
                     <Route path="*" element={<Navigate to="/incidents" replace />} />

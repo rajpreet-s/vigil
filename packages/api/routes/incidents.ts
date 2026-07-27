@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { Prisma } from '@prisma/client';
+import { WebClient } from '@slack/web-api';
 
 interface IncidentsQuery {
     cursor?: string;
@@ -329,6 +330,23 @@ const incidentsRoutes: FastifyPluginAsync = async (fastify) => {
                         updateData.status = upperStatus as any;
                         if (upperStatus === 'APPROVED' || upperStatus === 'DISMISSED') {
                             updateData.resolved_at = new Date();
+                        }
+                        if (upperStatus === 'APPROVED') {
+                            const botToken = process.env.SLACK_BOT_TOKEN;
+                            const targetChannel = process.env.SLACK_INCIDENTS_CHANNEL || process.env.SLACK_ONCALL_USER_ID;
+                            if (botToken && targetChannel) {
+                                try {
+                                    const client = new WebClient(botToken);
+                                    const reportContent = rca_summary || existing.rca_summary || 'Incident marked resolved by operator.';
+                                    await client.chat.postMessage({
+                                        channel: targetChannel,
+                                        text: `🚨 *VIGIL INCIDENT RCA REPORT DISPATCHED*\n*Incident ID:* \`${id}\` | *Status:* RESOLVED\n\n${reportContent}`,
+                                    });
+                                    updateData.notification_sent = true;
+                                } catch (slackErr) {
+                                    fastify.log.error(slackErr, `Failed to dispatch Slack message for incident ${id}`);
+                                }
+                            }
                         }
                     }
                 }

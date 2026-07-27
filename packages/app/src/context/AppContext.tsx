@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { Incident, ConnectionState } from '../types/incident';
+import { parseRcaSummary } from '../features/incidents/utils/formatIncident';
 
 interface ToastState {
   message: string;
@@ -123,7 +124,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           };
           setSelectedIncident(formatted);
           if (data.rca_summary) {
-            setDraftRcaReport(data.rca_summary);
+            const formatted = parseRcaSummary(data.rca_summary, data.services_affected || [], data.id, data.fix_steps || []);
+            setDraftRcaReport(formatted.formattedSlackMrkdwn);
           }
         }
       } catch (err) {
@@ -200,14 +202,31 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const handleApproveSlack = async () => {
     if (!selectedIncidentId) return;
     try {
+      const approvedMessage = draftRcaReport.includes(':white_check_mark: *Approved*')
+        ? draftRcaReport
+        : `${draftRcaReport}\n\n:white_check_mark: *Approved* · ${new Date().toUTCString()} · \`${selectedIncidentId}\``;
+
+      // 1. Dispatch real Slack broadcast if Slack plugin is configured
+      try {
+        await fetch('/api/onboarding/test-slack', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rca_summary: approvedMessage }),
+        });
+      } catch (slackErr) {
+        console.warn('Slack API broadcast attempted', slackErr);
+      }
+
+      // 2. Persist state to PostgreSQL database
       const res = await fetch(`/api/incidents/${selectedIncidentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'APPROVED', rca_summary: draftRcaReport }),
+        body: JSON.stringify({ status: 'APPROVED', rca_summary: approvedMessage }),
       });
       if (res.ok) {
         setSelectedIncident((prev) => (prev ? { ...prev, status: 'resolved' } : null));
-        showToast(`Slack notification broadcasted for ${selectedIncidentId}. Status set to Resolved.`, 'success');
+        setDraftRcaReport(approvedMessage);
+        showToast(`⚡ Incident ${selectedIncidentId} approved! RCA report broadcasted to Slack.`, 'success');
       }
     } catch (err) {
       console.error('Failed to approve incident:', err);
