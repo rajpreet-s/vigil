@@ -17,7 +17,7 @@ export class WebhookService {
      * normalizing the alert metric name/severity, and persisting the anomaly to the database
      * using read-heavy optimizations and idempotency safety.
      */
-    public async processAlert(alert: AlertPayload): Promise<void> {
+    public async processAlert(alert: AlertPayload, orgId?: string): Promise<void> {
         const serviceName = alert.labels.service;
         const alertName = alert.labels.alertname;
 
@@ -37,6 +37,7 @@ export class WebhookService {
                     data: {
                         name: serviceName,
                         display_name: formattedDisplayName,
+                        org_id: orgId || null,
                     },
                 });
             } catch (err: any) {
@@ -72,6 +73,7 @@ export class WebhookService {
                     detected_at: detectedAt,
                     raw_payload: alert as any,
                     processed: false,
+                    org_id: orgId || service.org_id || null,
                 },
             });
         } catch (err: any) {

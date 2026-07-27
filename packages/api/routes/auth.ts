@@ -166,12 +166,44 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
                 },
             });
 
+            // Check if user has an existing Organization membership
+            let membership = await fastify.prisma.organizationMember.findFirst({
+                where: { user_id: user.id },
+                include: { org: true }
+            });
+
+            // If user has no organization yet, auto-provision a default Organization for them
+            if (!membership) {
+                const orgName = user.name ? `${user.name}'s Org` : `${user.email.split('@')[0]}'s Org`;
+                const slug = `${user.email.split('@')[0]}-${crypto.randomBytes(4).toString('hex')}`;
+                const apiKey = `vgl_live_${crypto.randomBytes(24).toString('hex')}`;
+
+                const newOrg = await fastify.prisma.organization.create({
+                    data: {
+                        name: orgName,
+                        slug: slug,
+                        api_key: apiKey,
+                    }
+                });
+
+                membership = await fastify.prisma.organizationMember.create({
+                    data: {
+                        org_id: newOrg.id,
+                        user_id: user.id,
+                        role: 'OWNER',
+                    },
+                    include: { org: true }
+                });
+            }
+
             // Create JWT session
             const sessionPayload: UserPayload = {
                 id: user.id,
                 email: user.email,
                 name: user.name,
                 picture: user.picture,
+                org_id: membership.org_id,
+                org_role: membership.role,
             };
 
             const token = fastify.jwt.sign(sessionPayload, { expiresIn: '7d' });
@@ -213,6 +245,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
                                     email: { type: 'string', format: 'email' },
                                     name: { type: 'string', nullable: true },
                                     picture: { type: 'string', nullable: true },
+                                    org_id: { type: 'string', nullable: true },
+                                    org_role: { type: 'string', nullable: true },
                                 },
                             },
                         },
