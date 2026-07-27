@@ -114,6 +114,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             suspectedRootCause: data.rca_summary || `Affected services: ${(data.services_affected || []).join(', ')}`,
             impactedServices: data.services_affected || [],
             timeline: data.timeline || [],
+            anomalies: data.anomalies || [],
+            causal_chain: data.causal_chain || [],
+            blast_radius: data.blast_radius || [],
+            ruled_out: data.ruled_out || [],
+            fix_steps: data.fix_steps || [],
+            root_cause_metric: data.root_cause_metric || null,
           };
           setSelectedIncident(formatted);
           if (data.rca_summary) {

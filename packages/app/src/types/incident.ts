@@ -16,6 +16,12 @@ export interface Incident {
   suspectedRootCause: string;
   impactedServices: string[];
   timeline: TimelineEvent[];
+  anomalies?: any[];
+  causal_chain?: any[];
+  blast_radius?: string[];
+  ruled_out?: any[];
+  fix_steps?: any[];
+  root_cause_metric?: any;
 }
 
 export type ConnectionState = 'connected' | 'reconnecting' | 'disconnected';

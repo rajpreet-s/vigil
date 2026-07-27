@@ -1,38 +1,54 @@
 import React from 'react';
 import { Badge } from '../../../components/ui/Badge';
+import { useApp } from '../../../context/AppContext';
 
 export const AccessibleDagTable: React.FC = () => {
+    const { selectedIncident } = useApp();
+
+    const alertsCount = selectedIncident?.alertsCount || selectedIncident?.anomalies?.length || 0;
+    const sourceSvc = selectedIncident?.source || selectedIncident?.impactedServices?.[0] || 'service';
+    const isResolved = selectedIncident?.status === 'resolved';
+
     const tableData = [
         {
             node: 'load',
             status: 'completed',
             variant: 'healthy',
-            output: '14 alerts ingested successfully',
+            output: `${alertsCount} alert anomaly payload${alertsCount === 1 ? '' : 's'} ingested`,
         },
         {
             node: 'correlate',
             status: 'completed',
             variant: 'healthy',
-            output: 'postgres-db-prod mapped',
+            output: selectedIncident?.impactedServices?.length
+                ? `${selectedIncident.impactedServices.join(' ➔ ')} mapped`
+                : `${sourceSvc} path mapped`,
         },
         {
             node: 'investigate',
             status: 'completed',
             variant: 'healthy',
-            output: 'Log check limits reached',
+            output: selectedIncident?.root_cause_metric
+                ? `Root cause metric isolated: ${JSON.stringify(selectedIncident.root_cause_metric)}`
+                : `Metric logs & root cause check complete for ${sourceSvc}`,
         },
         {
             node: 'retrieval',
             status: 'completed',
             variant: 'healthy',
-            output: '2 runbooks matched',
+            output: `Runbook knowledge base query executed for ${sourceSvc}`,
         },
-        { node: 'rca', status: 'completed', variant: 'healthy', output: 'Draft summary generated' },
+        {
+            node: 'rca',
+            status: 'completed',
+            variant: 'healthy',
+            output: selectedIncident?.rca_summary ? 'LLM RCA summary generated' : 'Diagnostic synthesis complete',
+        },
         {
             node: 'human_review',
-            status: 'suspended',
-            variant: 'warning',
-            output: 'Awaiting manual broadcast sign-off',
+            status: isResolved ? 'completed' : 'suspended',
+            variant: isResolved ? 'healthy' : 'warning',
+            output: isResolved ? 'Slack broadcast dispatched & marked resolved' : 'Awaiting manual broadcast sign-off',
         },
     ];
 

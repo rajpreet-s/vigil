@@ -12,27 +12,29 @@ export const NodeAuditLog: React.FC = () => {
             {activeNode === 'load' && (
                 <div className="space-y-3">
                     <div className="p-3 bg-surface-container-low border border-outline-variant/40 rounded-md font-mono text-[10px] space-y-1.5 text-[#c4c6cf]">
-                        <p className="text-secondary font-bold">
-                            ALERTMANGER Webhook Ingest payload
+                        <p className="text-secondary font-bold uppercase tracking-wider">
+                            ALERTMANGER Webhook Ingested Anomalies
                         </p>
-                        <p className="text-[#ffd98a]">{`{`}</p>
-                        <p className="pl-4">
-                            <span className="text-[#9e8e7c]">"receiver":</span> "vigil-webhook",
-                        </p>
-                        <p className="pl-4">
-                            <span className="text-[#9e8e7c]">"status":</span> "firing",
-                        </p>
-                        <p className="pl-4">
-                            <span className="text-[#9e8e7c]">"alerts":</span> [
-                        </p>
-                        <p className="pl-8">{`{ "name": "PostgresPoolUsagePercent", "severity": "critical" },`}</p>
-                        <p className="pl-8">{`{ "name": "WorkerDBConnectionFailure", "severity": "warning" }`}</p>
-                        <p className="pl-4">]</p>
-                        <p className="text-[#ffd98a]">{`}`}</p>
+                        {selectedIncident?.anomalies && selectedIncident.anomalies.length > 0 ? (
+                            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                                {selectedIncident.anomalies.map((anom: any, idx: number) => (
+                                    <div key={idx} className="border-l-2 border-primary/50 pl-2 text-[9.5px]">
+                                        <span className="text-[#ffd98a] font-bold">{anom.metric_name}</span> on{' '}
+                                        <span className="text-white font-mono">{anom.service_name}</span>{' '}
+                                        <span className={`text-[8.5px] px-1 rounded font-bold ${anom.severity === 'CRITICAL' ? 'bg-status-critical/20 text-status-critical' : 'bg-status-warning/20 text-status-warning'}`}>
+                                            {anom.severity}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-secondary/70">
+                                Aggregated {selectedIncident?.alertsCount || 0} alert anomaly events from Alertmanager.
+                            </p>
+                        )}
                     </div>
                     <div className="text-[10px] text-secondary/60 leading-relaxed font-mono">
-                        Vigil loaded {selectedIncident?.alertsCount || 14} unique alert payloads
-                        into correlation buffer.
+                        Vigil loaded {selectedIncident?.alertsCount || selectedIncident?.anomalies?.length || 0} unique alert payloads into correlation buffer.
                     </div>
                 </div>
             )}
@@ -41,20 +43,31 @@ export const NodeAuditLog: React.FC = () => {
             {activeNode === 'correlate' && (
                 <div className="space-y-3">
                     <div className="p-3 bg-surface-container-low border border-outline-variant/40 rounded-md font-mono text-[10px] space-y-2 text-[#c4c6cf]">
-                        <p className="text-secondary font-bold">
-                            Topology correlation path checklist
+                        <p className="text-secondary font-bold uppercase tracking-wider">
+                            Topology Correlation & Isolation
                         </p>
                         <div className="border-l border-status-healthy/30 pl-2">
                             <p className="text-white font-bold text-[9.5px]">Path Isolated:</p>
-                            <p className="text-secondary mt-0.5">postgres ➔ api-service ➔ worker</p>
-                        </div>
-                        <div className="border-l border-status-healthy/30 pl-2">
-                            <p className="text-white font-bold text-[9.5px]">Correlation Reason:</p>
-                            <p className="text-secondary mt-0.5">
-                                Temporal overlap &lt; 45s with path reachability topology
-                                constraints.
+                            <p className="text-secondary mt-0.5 font-mono">
+                                {selectedIncident?.impactedServices?.length ? selectedIncident.impactedServices.join(' ➔ ') : (selectedIncident?.source || 'N/A')}
                             </p>
                         </div>
+                        {selectedIncident?.blast_radius && selectedIncident.blast_radius.length > 0 && (
+                            <div className="border-l border-primary/30 pl-2">
+                                <p className="text-white font-bold text-[9.5px]">Blast Radius:</p>
+                                <p className="text-secondary mt-0.5 font-mono">
+                                    {selectedIncident.blast_radius.join(', ')}
+                                </p>
+                            </div>
+                        )}
+                        {selectedIncident?.ruled_out && selectedIncident.ruled_out.length > 0 && (
+                            <div className="border-l border-status-critical/30 pl-2">
+                                <p className="text-white font-bold text-[9.5px]">Ruled Out:</p>
+                                <p className="text-secondary mt-0.5 font-mono">
+                                    {JSON.stringify(selectedIncident.ruled_out)}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -63,24 +76,24 @@ export const NodeAuditLog: React.FC = () => {
             {activeNode === 'investigate' && (
                 <div className="space-y-3">
                     <div className="p-3 bg-surface-container-low border border-outline-variant/40 rounded-md font-mono text-[10px] space-y-1.5 text-[#c4c6cf]">
-                        <p className="text-secondary font-bold">PROMETHEUS TOOL LOOP QUERY LOGS</p>
+                        <p className="text-secondary font-bold uppercase tracking-wider">PROMETHEUS & ROOT CAUSE ISOLATION</p>
                         <p>
-                            <span className="text-[#9e8e7c]">12:15:30.091</span>{' '}
-                            <span className="text-[#ffd98a]">GET</span> /metrics/postgres_pool
+                            <span className="text-[#9e8e7c]">Primary Service:</span>{' '}
+                            <span className="text-white font-bold">{selectedIncident?.source || selectedIncident?.impactedServices?.[0] || 'N/A'}</span>
                         </p>
+                        {selectedIncident?.root_cause_metric && (
+                            <p>
+                                <span className="text-[#9e8e7c]">Root Cause Metric:</span>{' '}
+                                <span className="text-status-critical">{JSON.stringify(selectedIncident.root_cause_metric)}</span>
+                            </p>
+                        )}
                         <p>
-                            <span className="text-[#9e8e7c]">12:15:30.120</span>{' '}
-                            <span className="text-status-critical">[POOL_WARN]</span>{' '}
-                            active_connections: 98/100
-                        </p>
-                        <p>
-                            <span className="text-[#9e8e7c]">12:15:30.150</span>{' '}
-                            <span className="text-status-healthy">[SUCCESS]</span> isolated slow
-                            transaction #1042
+                            <span className="text-[#9e8e7c]">Started At:</span>{' '}
+                            <span className="text-secondary">{selectedIncident?.timestamp || 'N/A'}</span>
                         </p>
                     </div>
                     <div className="text-[10px] text-secondary/60 leading-relaxed font-mono">
-                        Low-confidence path triggered Prometheus investigation script automatically.
+                        Temporal and metric correlation script completed for root cause isolation.
                     </div>
                 </div>
             )}
@@ -89,23 +102,15 @@ export const NodeAuditLog: React.FC = () => {
             {activeNode === 'retrieval' && (
                 <div className="space-y-3">
                     <div className="p-3 bg-surface-container-low border border-outline-variant/40 rounded-md font-mono text-[10px] space-y-2 text-[#c4c6cf]">
-                        <p className="text-secondary font-bold">
-                            ChromaDB semantic runbook matches
+                        <p className="text-secondary font-bold uppercase tracking-wider">
+                            ChromaDB Runbook Knowledge Base Retrieval
                         </p>
-                        <div className="border-l border-primary/30 pl-2">
+                        <div className="border-l border-primary/30 pl-2 space-y-1">
                             <p className="text-white font-bold text-[9px]">
-                                runbook_postgres_limits.md
+                                Target Service: <span className="text-primary font-mono">{selectedIncident?.source || 'global'}</span>
                             </p>
-                            <p className="text-secondary text-[9px] mt-0.5">
-                                Similarity distance score: <strong>0.94</strong>
-                            </p>
-                        </div>
-                        <div className="border-l border-primary/30 pl-2">
-                            <p className="text-white font-bold text-[9px]">
-                                runbook_db_replicas.md
-                            </p>
-                            <p className="text-secondary text-[9px] mt-0.5">
-                                Similarity distance score: <strong>0.72</strong>
+                            <p className="text-secondary text-[9px]">
+                                Matched runbook context retrieved from vector database for incident evaluation.
                             </p>
                         </div>
                     </div>
@@ -116,19 +121,21 @@ export const NodeAuditLog: React.FC = () => {
             {activeNode === 'rca' && (
                 <div className="space-y-3">
                     <div className="p-3 bg-surface-container-low border border-outline-variant/40 rounded-md font-mono text-[10px] space-y-1.5 text-[#c4c6cf]">
-                        <p className="text-secondary font-bold">LLM Synthesis metrics</p>
+                        <p className="text-secondary font-bold uppercase tracking-wider">LLM Synthesis & Diagnostics</p>
                         <p>
-                            <span className="text-secondary">Model:</span> Claude-3-5-sonnet
+                            <span className="text-secondary">Confidence Score:</span>{' '}
+                            <span className="text-status-healthy font-bold">{selectedIncident?.confidence}%</span>
                         </p>
-                        <p>
-                            <span className="text-secondary">Prompt tokens:</span> 1,402
-                        </p>
-                        <p>
-                            <span className="text-secondary">Completion tokens:</span> 248
-                        </p>
-                        <p>
-                            <span className="text-secondary">Synthesis Latency:</span> 1.25s
-                        </p>
+                        {selectedIncident?.fix_steps && selectedIncident.fix_steps.length > 0 && (
+                            <div>
+                                <p className="text-secondary font-bold mb-1">Recommended Fix Steps:</p>
+                                <ul className="list-disc list-inside space-y-0.5 text-[9.5px] text-white/90">
+                                    {selectedIncident.fix_steps.map((step: any, idx: number) => (
+                                        <li key={idx}>{typeof step === 'string' ? step : JSON.stringify(step)}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -137,14 +144,18 @@ export const NodeAuditLog: React.FC = () => {
             {activeNode === 'human_review' && (
                 <div className="space-y-3">
                     <div className="p-3 bg-surface-container-low border border-outline-variant/40 rounded-md font-mono text-[10px] space-y-1.5 text-[#c4c6cf]">
-                        <p className="text-secondary font-bold">Human checkpoint state</p>
+                        <p className="text-secondary font-bold uppercase tracking-wider">Human Checkpoint State</p>
                         <p>
-                            <span className="text-secondary">State Status:</span> Suspended
-                            (Awaiting operator review)
+                            <span className="text-secondary">Incident Status:</span>{' '}
+                            <span className="text-white font-bold uppercase">{selectedIncident?.status}</span>
                         </p>
                         <p>
-                            <span className="text-secondary">Required Action:</span> Slack broadcast
-                            approval
+                            <span className="text-secondary">Incident ID:</span>{' '}
+                            <span className="text-secondary font-mono">{selectedIncident?.id}</span>
+                        </p>
+                        <p>
+                            <span className="text-secondary">Action Required:</span>{' '}
+                            {selectedIncident?.status === 'resolved' ? 'Slack notification sent' : 'Slack broadcast sign-off'}
                         </p>
                     </div>
                 </div>
