@@ -1,22 +1,93 @@
 import React, { useState } from 'react';
-import { Server, Sparkles, Copy, Check, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Server, Sparkles, Copy, Check, ArrowRight, ShieldCheck, Building2, Plus, UserPlus, Users } from 'lucide-react';
+import { useApp } from '../../../context/AppContext';
 
 interface StepWorkspaceProps {
   onNext: (data: any) => void;
 }
 
 export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext }) => {
+  const { activeOrg, userOrgs, createOrg, joinOrg, switchOrg } = useApp();
+
+  const [orgTab, setOrgTab] = useState<'current' | 'create' | 'join'>('current');
+  const [newOrgName, setNewOrgName] = useState('');
+  const [inviteInput, setInviteInput] = useState('');
+  const [isSubmittingOrg, setIsSubmittingOrg] = useState(false);
+
   const [workspaceName, setWorkspaceName] = useState('Production Cluster');
   const [apiBaseUrl, setApiBaseUrl] = useState(window.location.origin);
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [geminiModel, setGeminiModel] = useState<'gemini-2.5-flash' | 'gemini-2.5-pro'>('gemini-2.5-flash');
-  const [generatedOrgKey] = useState('vigil_org_live_' + Math.random().toString(36).substring(2, 12));
-  const [copied, setCopied] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [copiedInvite, setCopiedInvite] = useState(false);
 
-  const handleCopyKey = () => {
-    navigator.clipboard.writeText(generatedOrgKey);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copyToClipboard = async (text: string) => {
+    if (!text) return false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        return successful;
+      }
+    } catch (err) {
+      console.error('Clipboard copy failed:', err);
+      return false;
+    }
+  };
+
+  const handleCopyKey = async () => {
+    const keyToCopy = activeOrg?.api_key || '';
+    if (!keyToCopy) return;
+    const success = await copyToClipboard(keyToCopy);
+    if (success) {
+      setCopiedKey(true);
+      setTimeout(() => setCopiedKey(false), 2000);
+    }
+  };
+
+  const handleCopyInvite = async () => {
+    const codeToCopy = activeOrg?.invite_code || activeOrg?.api_key || activeOrg?.slug || '';
+    if (!codeToCopy) return;
+    const success = await copyToClipboard(codeToCopy);
+    if (success) {
+      setCopiedInvite(true);
+      setTimeout(() => setCopiedInvite(false), 2000);
+    }
+  };
+
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOrgName.trim()) return;
+    setIsSubmittingOrg(true);
+    const success = await createOrg(newOrgName.trim());
+    setIsSubmittingOrg(false);
+    if (success) {
+      setNewOrgName('');
+      setOrgTab('current');
+    }
+  };
+
+  const handleJoinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteInput.trim()) return;
+    setIsSubmittingOrg(true);
+    const success = await joinOrg(inviteInput.trim());
+    setIsSubmittingOrg(false);
+    if (success) {
+      setInviteInput('');
+      setOrgTab('current');
+    }
   };
 
   const handleProceed = (e: React.FormEvent) => {
@@ -28,7 +99,8 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext }) => {
       llmProvider: 'gemini',
       geminiModel,
       apiKey: geminiApiKey,
-      orgKey: generatedOrgKey,
+      orgId: activeOrg?.id,
+      orgKey: activeOrg?.api_key,
     });
   };
 
@@ -37,14 +109,182 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext }) => {
       <div>
         <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-mono mb-2">
           <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Self-Hosted & Telemetry Privacy</span>
+          <span>Self-Hosted & Organization Context</span>
         </div>
         <h3 className="text-xl font-bold text-white font-display tracking-tight">
-          Environment & Gemini Engine
+          Organization & Gemini Reasoning Engine
         </h3>
         <p className="text-xs text-secondary/80 mt-0.5">
-          Configure your self-hosted Vigil instance and connect Google Gemini for agentic root-cause analysis.
+          Select or set up your organization tenant, then configure your Google Gemini AI engine.
         </p>
+      </div>
+
+      {/* Organization Setup Section */}
+      <div className="p-4 rounded-2xl bg-surface-container-low/80 border border-surface-container-high/60 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-container-high/40 pb-3">
+          <div className="flex items-center gap-2.5">
+            <Building2 className="w-4 h-4 text-primary" />
+            <span className="text-xs font-bold text-white uppercase tracking-wider">
+              Organization & Tenant Context
+            </span>
+          </div>
+
+          {/* Org Tabs */}
+          <div className="flex items-center gap-1 bg-[#0c0e13] p-1 rounded-xl border border-surface-container-high">
+            <button
+              type="button"
+              onClick={() => setOrgTab('current')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                orgTab === 'current' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-secondary/70 hover:text-white'
+              }`}
+            >
+              <Users className="w-3 h-3" />
+              <span>Active Org</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setOrgTab('create')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                orgTab === 'create' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-secondary/70 hover:text-white'
+              }`}
+            >
+              <Plus className="w-3 h-3" />
+              <span>Create New</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setOrgTab('join')}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                orgTab === 'join' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-secondary/70 hover:text-white'
+              }`}
+            >
+              <UserPlus className="w-3 h-3" />
+              <span>Join Org</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Tab 1: Current Org Details */}
+        {orgTab === 'current' && (
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-[#0c0e13] border border-surface-container-high">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-white font-display">
+                    {activeOrg?.name || 'Default Organization'}
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    {activeOrg?.role || 'OWNER'}
+                  </span>
+                </div>
+                <p className="text-[11px] font-mono text-secondary/70 mt-0.5">
+                  Slug: {activeOrg?.slug || 'default-org'}
+                </p>
+              </div>
+
+              {userOrgs.length > 1 && (
+                <select
+                  value={activeOrg?.id || ''}
+                  onChange={(e) => switchOrg(e.target.value)}
+                  className="bg-surface-container-high border border-surface-container-highest text-white text-xs rounded-lg px-2.5 py-1.5 focus:outline-none"
+                >
+                  {userOrgs.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name} ({o.role})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Keys Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl bg-[#0c0e13] border border-surface-container-high flex items-center justify-between">
+                <div className="overflow-hidden pr-2">
+                  <div className="text-[11px] font-semibold text-secondary/80">Org API Key</div>
+                  <div className="font-mono text-xs text-primary truncate mt-0.5">
+                    {activeOrg?.api_key || 'vgl_live_...'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyKey}
+                  className="px-2.5 py-1 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-[11px] font-semibold text-white border border-surface-container-highest flex-shrink-0 flex items-center gap-1"
+                >
+                  {copiedKey ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedKey ? 'Copied' : 'Copy'}</span>
+                </button>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#0c0e13] border border-surface-container-high flex items-center justify-between">
+                <div className="overflow-hidden pr-2">
+                  <div className="text-[11px] font-semibold text-secondary/80">Team Invite Code</div>
+                  <div className="font-mono text-xs text-emerald-400 truncate mt-0.5">
+                    {activeOrg?.invite_code || 'vigil_inv_...'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyInvite}
+                  className="px-2.5 py-1 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-[11px] font-semibold text-white border border-surface-container-highest flex-shrink-0 flex items-center gap-1"
+                >
+                  {copiedInvite ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedInvite ? 'Copied' : 'Invite'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: Create Org Form */}
+        {orgTab === 'create' && (
+          <div className="p-3.5 rounded-xl bg-[#0c0e13] border border-surface-container-high space-y-3">
+            <h4 className="text-xs font-bold text-white">Create a New Organization</h4>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newOrgName}
+                onChange={(e) => setNewOrgName(e.target.value)}
+                placeholder="e.g. Acme Corp Infrastructure"
+                className="flex-1 bg-surface-container-low border border-surface-container-high rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary"
+              />
+              <button
+                type="button"
+                onClick={handleCreateSubmit}
+                disabled={isSubmittingOrg || !newOrgName.trim()}
+                className="px-4 py-2 bg-primary text-on-primary font-bold text-xs rounded-lg disabled:opacity-50 hover:brightness-110"
+              >
+                {isSubmittingOrg ? 'Creating...' : 'Create & Switch'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: Join Org Form */}
+        {orgTab === 'join' && (
+          <div className="p-3.5 rounded-xl bg-[#0c0e13] border border-surface-container-high space-y-3">
+            <h4 className="text-xs font-bold text-white">Join an Existing Organization</h4>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={inviteInput}
+                onChange={(e) => setInviteInput(e.target.value)}
+                placeholder="Paste Invite Code (vigil_inv_...) or Org Slug"
+                className="flex-1 bg-surface-container-low border border-surface-container-high rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary"
+              />
+              <button
+                type="button"
+                onClick={handleJoinSubmit}
+                disabled={isSubmittingOrg || !inviteInput.trim()}
+                className="px-4 py-2 bg-primary text-on-primary font-bold text-xs rounded-lg disabled:opacity-50 hover:brightness-110"
+              >
+                {isSubmittingOrg ? 'Joining...' : 'Join Org'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Self-Hosted Architecture Card */}
@@ -142,22 +382,6 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext }) => {
             className="w-full bg-[#0c0e13] border border-surface-container-high rounded-lg px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary transition-all"
           />
         </div>
-      </div>
-
-      {/* Org Secret Key */}
-      <div className="p-3.5 rounded-xl bg-[#0c0e13] border border-surface-container-high flex items-center justify-between">
-        <div>
-          <div className="text-xs font-semibold text-white">Organization API Key</div>
-          <div className="font-mono text-xs text-primary mt-0.5 select-all">{generatedOrgKey}</div>
-        </div>
-        <button
-          type="button"
-          onClick={handleCopyKey}
-          className="px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-xs font-semibold text-white border border-surface-container-highest transition-all flex items-center gap-1.5"
-        >
-          {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-          <span>{copied ? 'Copied' : 'Copy'}</span>
-        </button>
       </div>
 
       {/* Next Action */}

@@ -16,6 +16,18 @@ export interface UserInfo {
   org_role?: string | null;
 }
 
+export interface OrgInfo {
+  id: string;
+  name: string;
+  slug: string;
+  role: string;
+  joined_at?: string;
+  api_key?: string;
+  invite_code?: string;
+  member_count?: number;
+  is_active?: boolean;
+}
+
 interface AppContextType {
   incidents: Incident[];
   selectedIncidentId: string;
@@ -36,7 +48,15 @@ interface AppContextType {
   isSearchingKb: boolean;
   toast: ToastState | null;
   user: UserInfo | null;
+  userOrgs: OrgInfo[];
+  activeOrg: OrgInfo | null;
   setUser: (user: UserInfo | null) => void;
+  
+  // Organization Actions
+  refreshOrgs: () => Promise<void>;
+  switchOrg: (orgId: string) => Promise<boolean>;
+  createOrg: (name: string, slug?: string) => Promise<boolean>;
+  joinOrg: (inviteCode: string) => Promise<boolean>;
   
   // Actions
   setFilterSeverity: (val: 'all' | 'critical' | 'warning') => void;
@@ -87,8 +107,126 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Toast banner
   const [toast, setToast] = useState<ToastState | null>(null);
 
-  // User Profile details
+  // User & Organization details
   const [user, setUser] = useState<UserInfo | null>(null);
+  const [userOrgs, setUserOrgs] = useState<OrgInfo[]>([]);
+  const [activeOrg, setActiveOrg] = useState<OrgInfo | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'warning' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const refreshOrgs = async () => {
+    try {
+      const meRes = await fetch('/api/auth/me');
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        if (meData.authenticated) {
+          setUser(meData.user);
+        }
+      }
+
+      const orgsRes = await fetch('/api/orgs');
+      if (orgsRes.ok) {
+        const data = await orgsRes.json();
+        if (data.success) {
+          setUserOrgs(data.organizations || []);
+          const active = (data.organizations || []).find((o: OrgInfo) => o.is_active) || data.organizations?.[0] || null;
+          setActiveOrg(active);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch orgs:', err);
+    }
+  };
+
+  React.useEffect(() => {
+    refreshOrgs();
+  }, []);
+
+  // Reset selected incident and active draft state whenever active organization changes
+  React.useEffect(() => {
+    if (activeOrg?.id) {
+      setSelectedIncidentId('');
+      setSelectedIncident(null);
+      setDraftRcaReport('');
+      setKbQuery('');
+      setKbResults([]);
+    }
+  }, [activeOrg?.id]);
+
+  const switchOrg = async (orgId: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/orgs/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org_id: orgId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(`Switched active organization to ${data.active_org.name}`, 'success');
+        await refreshOrgs();
+        setIsRefreshing(true);
+        setTimeout(() => setIsRefreshing(false), 800);
+        return true;
+      } else {
+        showToast(data.error || 'Failed to switch organization', 'error');
+        return false;
+      }
+    } catch (err) {
+      showToast('Network error while switching organization', 'error');
+      return false;
+    }
+  };
+
+  const createOrg = async (name: string, slug?: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/orgs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, slug }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(`Created organization "${data.organization.name}"!`, 'success');
+        await refreshOrgs();
+        setIsRefreshing(true);
+        setTimeout(() => setIsRefreshing(false), 800);
+        return true;
+      } else {
+        showToast(data.error || 'Failed to create organization', 'error');
+        return false;
+      }
+    } catch (err) {
+      showToast('Network error while creating organization', 'error');
+      return false;
+    }
+  };
+
+  const joinOrg = async (inviteCode: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/orgs/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invite_code: inviteCode }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(data.message || `Joined organization "${data.organization.name}"!`, 'success');
+        await refreshOrgs();
+        setIsRefreshing(true);
+        setTimeout(() => setIsRefreshing(false), 800);
+        return true;
+      } else {
+        showToast(data.error || 'Invalid invite code', 'error');
+        return false;
+      }
+    } catch (err) {
+      showToast('Network error while joining organization', 'error');
+      return false;
+    }
+  };
 
   // Fetch real incident details whenever selectedIncidentId changes
   React.useEffect(() => {
@@ -137,11 +275,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       isMounted = false;
     };
   }, [selectedIncidentId]);
-
-  const showToast = (message: string, type: 'success' | 'warning' | 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  };
 
   const triggerRefresh = () => {
     setIsRefreshing(true);
@@ -289,7 +422,14 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         isSearchingKb,
         toast,
         user,
+        userOrgs,
+        activeOrg,
         setUser,
+        
+        refreshOrgs,
+        switchOrg,
+        createOrg,
+        joinOrg,
         
         setFilterSeverity,
         setSelectedIncidentId,
