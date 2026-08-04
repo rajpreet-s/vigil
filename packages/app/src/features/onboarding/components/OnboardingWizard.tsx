@@ -7,11 +7,15 @@ import { StepComplete } from './StepComplete';
 import { Check, ShieldCheck, Activity, Cpu, Server, Network, RotateCcw } from 'lucide-react';
 import VigilLogo from '../../../components/ui/VigilLogo';
 
+import { useApp } from '../../../context/AppContext';
+
 interface OnboardingWizardProps {
   onComplete?: () => void;
 }
 
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
+  const { activeOrg } = useApp();
+
   // Restore active step and wizard data from localStorage on page refresh
   const [currentStep, setCurrentStep] = useState<number>(() => {
     try {
@@ -64,7 +68,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
       .then((res) => res.json())
       .then((data) => setStatus(data))
       .catch(() => {});
-  }, [currentStep]);
+  }, [currentStep, activeOrg?.id]);
 
   const handleNextStep = (stepData: any) => {
     setWizardData((prev: any) => ({ ...prev, ...stepData }));

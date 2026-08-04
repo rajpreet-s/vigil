@@ -19,6 +19,7 @@ export const IncidentList: React.FC<IncidentListProps> = ({ isMini = false, onEx
         simStep,
         simAlertsCount,
         settleProgress,
+        activeOrg,
     } = useApp();
 
     const {
@@ -27,7 +28,7 @@ export const IncidentList: React.FC<IncidentListProps> = ({ isMini = false, onEx
         isFetchingMore,
         hasMore,
         sentinelRef,
-    } = useIncidents({ severity: filterSeverity });
+    } = useIncidents({ severity: filterSeverity, orgId: activeOrg?.id });
 
     // Auto-select the first incident from the API if none selected or selected ID invalid
     React.useEffect(() => {
