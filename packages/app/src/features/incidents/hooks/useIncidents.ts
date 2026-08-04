@@ -4,6 +4,7 @@ import type { ApiIncident, PaginatedIncidentsResponse } from '../../../types/inc
 interface UseIncidentsOptions {
     severity?: string;
     status?: string;
+    orgId?: string | null;
 }
 
 export function useIncidents(options: UseIncidentsOptions = {}) {
@@ -61,12 +62,13 @@ export function useIncidents(options: UseIncidentsOptions = {}) {
         []
     );
 
-    // Initial fetch and fetch when filters change
+    // Initial fetch and fetch when filters or orgId change
     useEffect(() => {
+        setIncidents([]);
         setNextCursor(null);
         setHasMore(true);
         fetchIncidents(null, true);
-    }, [options.severity, options.status, fetchIncidents]);
+    }, [options.severity, options.status, options.orgId, fetchIncidents]);
 
     // Fetch next page
     const fetchNextPage = useCallback(() => {

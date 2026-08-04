@@ -178,11 +178,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
                 const slug = `${user.email.split('@')[0]}-${crypto.randomBytes(4).toString('hex')}`;
                 const apiKey = `vgl_live_${crypto.randomBytes(24).toString('hex')}`;
 
+                const inviteCode = `vigil_inv_${crypto.randomBytes(12).toString('hex')}`;
+
                 const newOrg = await fastify.prisma.organization.create({
                     data: {
                         name: orgName,
                         slug: slug,
                         api_key: apiKey,
+                        invite_code: inviteCode,
                     }
                 });
 
