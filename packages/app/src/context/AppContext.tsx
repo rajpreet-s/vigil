@@ -35,10 +35,6 @@ interface AppContextType {
   filterSeverity: 'all' | 'critical' | 'warning';
   isRefreshing: boolean;
   connectionState: ConnectionState;
-  isSimulating: boolean;
-  simStep: number;
-  settleProgress: number;
-  simAlertsCount: number;
   activeNode: string | null;
   showDismissModal: boolean;
   showAccessibleDAG: boolean;
@@ -69,8 +65,8 @@ interface AppContextType {
   setActiveNode: (node: string | null) => void;
   
   triggerRefresh: () => void;
+  refetchIncidents: () => Promise<void>;
   handleReconnect: () => void;
-  triggerSimulatedOutage: () => void;
   showToast: (message: string, type: 'success' | 'warning' | 'error') => void;
   handleApproveSlack: () => void;
   handleConfirmDismiss: () => void;
@@ -86,12 +82,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [filterSeverity, setFilterSeverity] = useState<'all' | 'critical' | 'warning'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>('connected');
-  
-  // Real-time Simulation state variables
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [simStep, setSimStep] = useState<number>(0); // 0: Idle, 1: Settle Count, 2: Run Nodes, 3: Completed
-  const [settleProgress, setSettleProgress] = useState(0);
-  const [simAlertsCount, setSimAlertsCount] = useState(0);
   const [activeNode, setActiveNode] = useState<string | null>('human_review');
   
   // Custom dialogs & dropdowns
@@ -116,6 +106,33 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
+
+  const fetchIncidents = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/incidents');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.data) {
+          const formatted: Incident[] = data.data.map((item: any) => ({
+            id: item.id,
+            title: item.rca_summary ? item.rca_summary.split('\n')[0].replace(/^#+\s*/, '') : `Outage on ${(item.services_affected || []).join(', ') || 'Service'}`,
+            status: item.status === 'APPROVED' || item.status === 'approved' ? 'resolved' : item.status === 'OPEN' || item.status === 'open' || item.status === 'PENDING_REVIEW' || item.status === 'pending_review' ? 'reviewing' : item.status.toLowerCase(),
+            severity: 'critical',
+            timestamp: new Date(item.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            source: item.root_cause_service || (item.services_affected && item.services_affected[0]) || 'Unknown Service',
+            alertsCount: item.anomaly_count || 0,
+            confidence: item.confidence ? parseInt(String(item.confidence).replace(/[^0-9]/g, '') || '90', 10) : 90,
+            suspectedRootCause: item.rca_summary || `Affected services: ${(item.services_affected || []).join(', ')}`,
+            impactedServices: item.services_affected || [],
+            timeline: [],
+          }));
+          setIncidents(formatted);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch incidents in AppContext:', err);
+    }
+  }, []);
 
   const refreshOrgs = async () => {
     try {
@@ -145,7 +162,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     refreshOrgs();
   }, []);
 
-  // Reset selected incident and active draft state whenever active organization changes
+  // Reset selected incident and fetch incidents whenever active organization changes
   React.useEffect(() => {
     if (activeOrg?.id) {
       setSelectedIncidentId('');
@@ -153,8 +170,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setDraftRcaReport('');
       setKbQuery('');
       setKbResults([]);
+      fetchIncidents();
     }
-  }, [activeOrg?.id]);
+  }, [activeOrg?.id, fetchIncidents]);
 
   const switchOrg = async (orgId: string): Promise<boolean> => {
     try {
@@ -168,7 +186,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         showToast(`Switched active organization to ${data.active_org.name}`, 'success');
         await refreshOrgs();
         setIsRefreshing(true);
-        setTimeout(() => setIsRefreshing(false), 800);
+        fetchIncidents().finally(() => {
+          setTimeout(() => setIsRefreshing(false), 800);
+        });
         return true;
       } else {
         showToast(data.error || 'Failed to switch organization', 'error');
@@ -192,7 +212,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         showToast(`Created organization "${data.organization.name}"!`, 'success');
         await refreshOrgs();
         setIsRefreshing(true);
-        setTimeout(() => setIsRefreshing(false), 800);
+        fetchIncidents().finally(() => {
+          setTimeout(() => setIsRefreshing(false), 800);
+        });
         return true;
       } else {
         showToast(data.error || 'Failed to create organization', 'error');
@@ -216,7 +238,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         showToast(data.message || `Joined organization "${data.organization.name}"!`, 'success');
         await refreshOrgs();
         setIsRefreshing(true);
-        setTimeout(() => setIsRefreshing(false), 800);
+        fetchIncidents().finally(() => {
+          setTimeout(() => setIsRefreshing(false), 800);
+        });
         return true;
       } else {
         showToast(data.error || 'Invalid invite code', 'error');
@@ -278,7 +302,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const triggerRefresh = () => {
     setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 800);
+    fetchIncidents().finally(() => {
+      setTimeout(() => setIsRefreshing(false), 800);
+    });
   };
 
   const handleReconnect = () => {
@@ -287,49 +313,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setConnectionState('connected');
       showToast('Successfully reconnected to Agent Server.', 'success');
     }, 1500);
-  };
-
-  const runSimulatedAgentGraph = (currentAlertsCount: number) => {
-    setSimStep(2);
-    const nodes = ['load', 'correlate', 'investigate', 'retrieval', 'rca', 'human_review'];
-    let nodeIndex = 0;
-    
-    const nodeInterval = setInterval(() => {
-      if (nodeIndex >= nodes.length) {
-        clearInterval(nodeInterval);
-        
-        setSimStep(3);
-        setIsSimulating(false);
-        setActiveNode('human_review');
-        showToast('Simulated alert storm processing sequence complete.', 'warning');
-        return;
-      }
-      
-      setActiveNode(nodes[nodeIndex]);
-      nodeIndex++;
-    }, 900);
-  };
-
-  const triggerSimulatedOutage = () => {
-    setIsSimulating(true);
-    setSimStep(1);
-    setSettleProgress(100);
-    let count = 1;
-    setSimAlertsCount(count);
-    setActiveNode(null);
-    
-    const settleInterval = setInterval(() => {
-      setSettleProgress((prev) => {
-        if (prev <= 10) {
-          clearInterval(settleInterval);
-          runSimulatedAgentGraph(count);
-          return 0;
-        }
-        return prev - 10;
-      });
-      count += Math.floor(Math.random() * 3) + 1;
-      setSimAlertsCount(count);
-    }, 400);
   };
 
   const handleApproveSlack = async () => {
@@ -358,6 +341,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       });
       if (res.ok) {
         setSelectedIncident((prev) => (prev ? { ...prev, status: 'resolved' } : null));
+        setIncidents((prev) => prev.map((inc) => (inc.id === selectedIncidentId ? { ...inc, status: 'resolved' } : inc)));
         setDraftRcaReport(approvedMessage);
         showToast(`⚡ Incident ${selectedIncidentId} approved! RCA report broadcasted to Slack.`, 'success');
       }
@@ -376,6 +360,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       });
       if (res.ok) {
         setSelectedIncident((prev) => (prev ? { ...prev, status: 'dismissed' } : null));
+        setIncidents((prev) => prev.map((inc) => (inc.id === selectedIncidentId ? { ...inc, status: 'dismissed' } : inc)));
         setShowDismissModal(false);
         showToast(`Incident ${selectedIncidentId} was dismissed. Checkpointed state discarded.`, 'error');
       }
@@ -409,10 +394,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         filterSeverity,
         isRefreshing,
         connectionState,
-        isSimulating,
-        simStep,
-        settleProgress,
-        simAlertsCount,
         activeNode,
         showDismissModal,
         showAccessibleDAG,
@@ -441,8 +422,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setActiveNode,
         
         triggerRefresh,
+        refetchIncidents: fetchIncidents,
         handleReconnect,
-        triggerSimulatedOutage,
         showToast,
         handleApproveSlack,
         handleConfirmDismiss,

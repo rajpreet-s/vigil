@@ -42,7 +42,7 @@ export const AccessibleDagTable: React.FC = () => {
             node: 'rca',
             status: 'completed',
             variant: 'healthy',
-            output: selectedIncident?.rca_summary ? 'LLM RCA summary generated' : 'Diagnostic synthesis complete',
+            output: selectedIncident?.suspectedRootCause ? 'LLM RCA summary generated' : 'Diagnostic synthesis complete',
         },
         {
             node: 'human_review',

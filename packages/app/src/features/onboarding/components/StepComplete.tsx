@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Sparkles, ArrowRight } from 'lucide-react';
+import { CheckCircle2, ArrowRight } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 
 interface StepCompleteProps {
@@ -8,20 +8,9 @@ interface StepCompleteProps {
   onFinish: () => void;
 }
 
-export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData, onFinish }) => {
+export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData: _summaryData, onFinish }) => {
   const navigate = useNavigate();
-  const { triggerSimulatedOutage, showToast } = useApp();
-  const [isSimulating, setIsSimulating] = useState(false);
-
-  const handleSimulateAndGo = () => {
-    setIsSimulating(true);
-    showToast('Onboarding complete! Initiating demonstration alert storm...', 'success');
-    onFinish();
-    navigate('/incidents');
-    setTimeout(() => {
-      triggerSimulatedOutage();
-    }, 400);
-  };
+  const { showToast } = useApp();
 
   const handleJustGo = () => {
     showToast('Setup complete! Welcome to Vigil Incident Command.', 'success');
@@ -92,21 +81,11 @@ export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData, onFinis
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-        <button
-          type="button"
-          onClick={handleSimulateAndGo}
-          disabled={isSimulating}
-          className="w-full sm:w-auto px-6 py-3 rounded-xl bg-primary text-on-primary font-bold text-xs hover:brightness-110 shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>Simulate Test Outage & Launch Dashboard</span>
-        </button>
-
+      <div className="flex items-center justify-center pt-2">
         <button
           type="button"
           onClick={handleJustGo}
-          className="w-full sm:w-auto px-5 py-3 rounded-xl bg-surface-container-low hover:bg-surface-container-high text-xs font-semibold text-secondary border border-surface-container-high transition-all flex items-center justify-center gap-2"
+          className="w-full sm:w-auto px-6 py-3 rounded-xl bg-primary text-on-primary font-bold text-xs hover:brightness-110 shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
         >
           <span>Go to Dashboard</span>
           <ArrowRight className="w-4 h-4" />
