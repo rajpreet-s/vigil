@@ -1,5 +1,5 @@
 import React from 'react';
-import { ListFilter, Clock, Layers, Loader2, AlertCircle, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { ListFilter, Clock, Layers, Loader2, ShieldAlert } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { Badge } from '../../../components/ui/Badge';
 import { useIncidents } from '../hooks/useIncidents';
@@ -16,9 +16,6 @@ export const IncidentList: React.FC<IncidentListProps> = ({ isMini = false, onEx
         setSelectedIncidentId,
         filterSeverity,
         setFilterSeverity,
-        simStep,
-        simAlertsCount,
-        settleProgress,
         activeOrg,
     } = useApp();
 
@@ -130,30 +127,6 @@ export const IncidentList: React.FC<IncidentListProps> = ({ isMini = false, onEx
                     </button>
                 </div>
             </div>
-
-            {/* Settle state loading simulation card */}
-            {simStep === 1 && (
-                <div className="p-3.5 border-b border-status-warning/30 bg-status-warning/10 animate-pulse space-y-2">
-                    <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-status-warning font-bold flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3 animate-spin" />
-                            DEBOUNCING INGESTION
-                        </span>
-                        <span className="text-[10px] bg-status-warning/20 text-status-warning px-1.5 py-0.5 rounded font-mono font-bold">
-                            {simAlertsCount} alerts
-                        </span>
-                    </div>
-                    <h4 className="text-xs font-bold text-white truncate">
-                        Incoming Alert Storm Ingestion...
-                    </h4>
-                    <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
-                        <div
-                            className="bg-status-warning h-full transition-all duration-300"
-                            style={{ width: `${settleProgress}%` }}
-                        />
-                    </div>
-                </div>
-            )}
 
             {isLoading && displayIncidents.length === 0 ? (
                 <div className="p-8 flex flex-col items-center justify-center gap-3 text-secondary/70">

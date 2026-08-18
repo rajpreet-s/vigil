@@ -100,7 +100,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
     { num: 2, label: 'Slack Bot Credentials', desc: 'Alert broadcasting & approval webhooks' },
     { num: 3, label: 'Prometheus & Alertmanager', desc: 'Telemetry & debouncing webhook target' },
     { num: 4, label: 'Topology & Runbooks', desc: 'Causal service graph & vector index' },
-    { num: 5, label: 'Readiness Verification', desc: 'Audit checklist & simulated outage launch' },
+    { num: 5, label: 'Readiness Verification', desc: 'Audit checklist & readiness verification' },
   ];
 
   return (

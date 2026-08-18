@@ -10,8 +10,6 @@ import {
     Clock,
     Activity,
     X,
-    ChevronRight,
-    ChevronLeft,
     PanelRightClose,
     PanelRightOpen,
 } from 'lucide-react';
@@ -38,7 +36,6 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
         setActiveNode,
         showAccessibleDAG,
         setShowAccessibleDAG,
-        simStep,
     } = useApp();
 
     if (!selectedIncident) return null;
@@ -52,8 +49,7 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
         { id: 'human_review', label: 'human review', desc: 'Slack Checkpoint & Sign-off', icon: User },
     ];
 
-    const getStepStatus = (stepId: string) => {
-        if (simStep === 2 && activeNode === stepId) return 'executing';
+    const getStepStatus = (stepId: string): 'completed' | 'suspended' | 'executing' | 'idle' => {
         if (selectedIncident.status === 'resolved') return 'completed';
 
         if (selectedIncident.status === 'reviewing') {
