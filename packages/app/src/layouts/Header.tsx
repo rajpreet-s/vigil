@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Sparkles, RefreshCw, Settings } from 'lucide-react';
+import { RefreshCw, Settings } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const Header: React.FC = () => {
@@ -8,10 +8,8 @@ export const Header: React.FC = () => {
   const {
     connectionState,
     setConnectionState,
-    isSimulating,
     isRefreshing,
     triggerRefresh,
-    triggerSimulatedOutage
   } = useApp();
 
   const [showDevMenu, setShowDevMenu] = useState(false);
@@ -51,20 +49,6 @@ export const Header: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Simulated outage trigger button (saturated CTA) */}
-        <button
-          onClick={triggerSimulatedOutage}
-          disabled={isSimulating}
-          className={`text-xs px-3.5 py-1.5 rounded-lg border font-semibold flex items-center gap-2 transition-all ${
-            isSimulating 
-              ? 'bg-surface-container-high border-surface-container-highest text-secondary/60 cursor-not-allowed'
-              : 'bg-primary border-primary text-on-primary hover:brightness-110 shadow-md animate-pulse'
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          {isSimulating ? 'Simulating...' : 'Trigger Simulated Outage'}
-        </button>
-
         <button
           onClick={triggerRefresh}
           className="p-2 text-secondary hover:text-white hover:bg-surface-container-high/40 rounded-lg transition-all"

@@ -19,7 +19,9 @@ export const Sidebar: React.FC = () => {
 
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    const activeIncidentsCount = incidents.filter((i) => i.status === 'reviewing').length;
+    const activeIncidentsCount = incidents.filter(
+        (i) => i.status !== 'resolved' && i.status !== 'approved' && i.status !== 'dismissed'
+    ).length;
     const isCompleted = localStorage.getItem('vigil_onboarding_completed') === 'true';
 
     useEffect(() => {
