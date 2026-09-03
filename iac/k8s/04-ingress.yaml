@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vigil-ingress
+  namespace: vigil
+  annotations:
+    # Uses the GKE Google Cloud HTTP(S) Application Load Balancer
+    kubernetes.io/ingress.class: "gce"
+spec:
+  rules:
+    - http:
+        paths:
+          # 1. Route API requests to the API backend service
+          - path: /api/*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: api-public
+                port:
+                  number: 80
+
+          # 2. Route all other requests to the frontend web app
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: app-service
+                port:
+                  number: 80
