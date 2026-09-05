@@ -88,6 +88,12 @@ services:
             - AGENT_URL=http://agent:3001
             - NODE_ENV=production
             - PORT=8080
+            - JWT_SECRET=${JWT_SECRET}
+            - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+            - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+            - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
+            - FRONTEND_URL=http://localhost:3000
+            - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
         ports:
             - '8080:8080'
         depends_on:
@@ -95,6 +101,28 @@ services:
                 condition: service_healthy
             agent:
                 condition: service_healthy
+
+    app:
+        build:
+            context: .
+            dockerfile: packages/app/Dockerfile
+        container_name: vigil_app
+        restart: unless-stopped
+        ports:
+            - '3000:80'
+        depends_on:
+            - api
+
+    web:
+        build:
+            context: .
+            dockerfile: packages/web/Dockerfile
+        container_name: vigil_web
+        restart: unless-stopped
+        ports:
+            - '3002:80'
+
+
 
 volumes:
     postgres_data:

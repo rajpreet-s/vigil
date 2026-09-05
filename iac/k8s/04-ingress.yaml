@@ -1,0 +1,46 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vigil-ingress
+  namespace: vigil
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    networking.gke.io/managed-certificates: "vigil-prod-cert"
+    kubernetes.io/ingress.global-static-ip-name: "vigil-static-ip"
+    networking.gke.io/v1beta1.FrontendConfig: "vigil-frontend-config"
+spec:
+  ingressClassName: "gce"
+  defaultBackend:
+    service:
+      name: web
+      port:
+        number: 80
+  rules:
+    - http:
+        paths:
+          # 1. Route API requests to the API backend service
+          - path: /api/*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: api
+                port:
+                  number: 80
+          
+          # 2. Route all other requests to the frontend web app
+          - path: /app/*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: app-service
+                port:
+                  number: 80
+
+          # 3. Route web requests to the frontend web app
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: web
+                port:
+                  number: 80
