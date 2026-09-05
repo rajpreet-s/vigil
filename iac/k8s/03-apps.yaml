@@ -93,7 +93,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: us-central1-docker.pkg.dev/project-60bff6c1-455a-4a5c-b3d/vigil-repo/vigil-api:v1
+          image: us-central1-docker.pkg.dev/project-60bff6c1-455a-4a5c-b3d/vigil-repo/vigil-api:v2
           imagePullPolicy: IfNotPresent
           resources:
             requests:
@@ -134,14 +134,27 @@ spec:
                 secretKeyRef:
                   name: vigil-secrets
                   key: GOOGLE_REDIRECT_URI
+            - name: FRONTEND_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vigil-secrets
+                  key: FRONTEND_URL
           ports:
             - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: api-public
+  name: api
   namespace: vigil
+  annotations:
+    cloud.google.com/backend-config: '{"default": "api-backendconfig"}'
 spec:
   type: ClusterIP # Requests a public external IP from Google Cloud
   ports:
@@ -167,7 +180,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: us-central1-docker.pkg.dev/project-60bff6c1-455a-4a5c-b3d/vigil-repo/vigil-app:v1
+          image: us-central1-docker.pkg.dev/project-60bff6c1-455a-4a5c-b3d/vigil-repo/vigil-app:v2
           imagePullPolicy: IfNotPresent
           resources:
             requests:
@@ -191,4 +204,53 @@ spec:
       targetPort: 80
   selector:
     app: vigil-app
-
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vigil-web
+  namespace: vigil
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vigil-web
+  template:
+    metadata:
+      labels:
+        app: vigil-web
+    spec:
+      containers:
+        - name: web
+          image: us-central1-docker.pkg.dev/project-60bff6c1-455a-4a5c-b3d/vigil-repo/vigil-web:v1
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 2
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: vigil
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: vigil-web

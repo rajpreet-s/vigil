@@ -37,6 +37,8 @@ spec:
                 secretKeyRef:
                   name: vigil-secrets
                   key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           ports:
             - containerPort: 5432
           volumeMounts:

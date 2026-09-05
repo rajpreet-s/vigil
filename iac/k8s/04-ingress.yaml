@@ -4,9 +4,17 @@ metadata:
   name: vigil-ingress
   namespace: vigil
   annotations:
-    # Uses the GKE Google Cloud HTTP(S) Application Load Balancer
     kubernetes.io/ingress.class: "gce"
+    networking.gke.io/managed-certificates: "vigil-prod-cert"
+    kubernetes.io/ingress.global-static-ip-name: "vigil-static-ip"
+    networking.gke.io/v1beta1.FrontendConfig: "vigil-frontend-config"
 spec:
+  ingressClassName: "gce"
+  defaultBackend:
+    service:
+      name: web
+      port:
+        number: 80
   rules:
     - http:
         paths:
@@ -15,15 +23,24 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: api-public
+                name: api
                 port:
                   number: 80
-
+          
           # 2. Route all other requests to the frontend web app
-          - path: /*
+          - path: /app/*
             pathType: ImplementationSpecific
             backend:
               service:
                 name: app-service
+                port:
+                  number: 80
+
+          # 3. Route web requests to the frontend web app
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: web
                 port:
                   number: 80

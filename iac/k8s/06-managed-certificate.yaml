@@ -1,0 +1,9 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: vigil-prod-cert
+  namespace: vigil
+spec:
+  domains:
+    - vigilapp.in
+    - www.vigilapp.in

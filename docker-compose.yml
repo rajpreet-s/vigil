@@ -113,6 +113,16 @@ services:
         depends_on:
             - api
 
+    web:
+        build:
+            context: .
+            dockerfile: packages/web/Dockerfile
+        container_name: vigil_web
+        restart: unless-stopped
+        ports:
+            - '3002:80'
+
+
 
 volumes:
     postgres_data:
