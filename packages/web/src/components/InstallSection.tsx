@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import posthog from 'posthog-js';
 
 const COMMAND = 'docker-compose up -d';
 
@@ -21,6 +22,11 @@ export default function InstallSection() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+    posthog.capture('install_command_copied', { command: COMMAND });
+  };
+
+  const handleFileIssueClick = () => {
+    posthog.capture('file_issue_clicked');
   };
 
   return (
@@ -95,6 +101,7 @@ export default function InstallSection() {
             href="https://github.com/rajpreet-s/vigil/issues"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={handleFileIssueClick}
             className="flex items-center gap-sm font-body-md text-sm text-on-surface-variant hover:text-primary transition-colors"
           >
             <span className="material-symbols-outlined text-base">bug_report</span>

@@ -1,10 +1,17 @@
+import posthog from 'posthog-js';
+
 export default function HeroSection() {
     const handleGetStarted = () => {
+        posthog.capture('get_started_clicked', { location: 'hero' });
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             window.location.href = 'http://localhost:5175/login';
         } else {
             window.location.href = '/app/login';
         }
+    };
+
+    const handleGitHubClick = () => {
+        posthog.capture('github_link_clicked', { location: 'hero' });
     };
     return (
         <section className="lantern-bg relative pt-section-desktop pb-section-desktop overflow-hidden px-md transition-colors duration-300 border-b border-outline-variant/30">
@@ -58,6 +65,7 @@ export default function HeroSection() {
                             href="https://github.com/rajpreet-s/vigil"
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={handleGitHubClick}
                             className="flex items-center gap-sm px-xl py-md border border-outline-variant/80 rounded-lg font-body-md text-on-surface hover:bg-surface-container-high/60 backdrop-blur-sm transition-colors w-full sm:w-auto justify-center"
                         >
                             <span className="material-symbols-outlined text-sm">terminal</span>
