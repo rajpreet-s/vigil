@@ -4,7 +4,6 @@ metadata:
   name: vigil-agent
   namespace: vigil
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: vigil-agent
@@ -82,7 +81,6 @@ metadata:
   name: vigil-api
   namespace: vigil
 spec:
-  replicas: 2 # High-availability API
   selector:
     matchLabels:
       app: vigil-api
@@ -222,7 +220,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: us-central1-docker.pkg.dev/project-60bff6c1-455a-4a5c-b3d/vigil-repo/vigil-web:v1
+          image: us-central1-docker.pkg.dev/project-60bff6c1-455a-4a5c-b3d/vigil-repo/vigil-web:v3
           imagePullPolicy: IfNotPresent
           resources:
             requests:

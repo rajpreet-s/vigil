@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import VigilLogo from './VigilLogo';
+import posthog from 'posthog-js';
 
 export default function NavBar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -27,16 +28,23 @@ export default function NavBar() {
   }, [isDark]);
 
   const toggleTheme = () => {
-    setIsDark((prev) => !prev);
+    const next = !isDark;
+    posthog.capture('theme_toggled', { theme: next ? 'dark' : 'light' });
+    setIsDark(next);
   };
 
   const handleGetStarted = () => {
+    posthog.capture('get_started_clicked', { location: 'navbar' });
     setMobileOpen(false);
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       window.location.href = 'http://localhost:5175/login';
     } else {
       window.location.href = '/app/login';
     }
+  };
+
+  const handleNavGitHubClick = (location: 'desktop' | 'mobile') => {
+    posthog.capture('nav_github_clicked', { nav_location: location });
   };
 
   return (
@@ -59,6 +67,7 @@ export default function NavBar() {
             href="https://github.com/rajpreet-s/vigil"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => handleNavGitHubClick('desktop')}
             className="font-body-md text-sm font-medium text-on-surface-variant hover:text-primary flex items-center gap-xs transition-colors duration-200"
           >
             GitHub
@@ -113,7 +122,7 @@ export default function NavBar() {
             href="https://github.com/rajpreet-s/vigil"
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => setMobileOpen(false)}
+            onClick={() => { setMobileOpen(false); handleNavGitHubClick('mobile'); }}
             className="font-body-md text-body-md text-on-surface-variant hover:text-primary py-sm flex items-center gap-xs transition-colors duration-200 border-b border-outline-variant/30"
           >
             GitHub
