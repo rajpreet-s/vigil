@@ -36,3 +36,4 @@ terraform.rc
 # ── Kubernetes Secrets ───────────────────────────────────────────────────
 *secrets.yaml
 !*secrets.example.yaml
+!*sealed-secrets.yaml
