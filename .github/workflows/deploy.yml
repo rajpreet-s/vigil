@@ -197,6 +197,9 @@ jobs:
   # ── Step 3: Deploy to GKE & Verify Zero-Downtime Rollout ───────────────────
   deploy:
     name: Deploy to GKE
+    environment:
+      name: production
+      url: https://vigilapp.in
     needs: [detect-changes, build-api, build-agent, build-app, build-web]
     if: always() && (needs.build-api.result == 'success' || needs.build-agent.result == 'success' || needs.build-app.result == 'success' || needs.build-web.result == 'success' || needs.detect-changes.outputs.k8s == 'true')
     runs-on: ubuntu-latest

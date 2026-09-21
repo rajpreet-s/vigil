@@ -1,5 +1,7 @@
 # Vigil
 
+[![Deploy Vigil to GKE](https://github.com/rajpreet-s/vigil/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/rajpreet-s/vigil/actions/workflows/deploy.yml)
+
 When Prometheus/Alertmanager fires 30 alerts for one outage, Vigil groups them into a single incident, walks the service dependency graph to find the actual root cause, and posts a structured Q1/Q2/Q3/Q4 analysis to Slack — so you're not manually correlating at 2am.
 
 ![Vigil Web App Dashboard](user-files/dashboard.png)
