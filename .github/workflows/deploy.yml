@@ -1,0 +1,281 @@
+name: Deploy Vigil to GKE
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/api/**'
+      - 'packages/agent/**'
+      - 'packages/app/**'
+      - 'packages/web/**'
+      - 'packages/shared/**'
+      - 'prisma/**'
+      - 'iac/k8s/**'
+      - '.github/workflows/deploy.yml'
+
+# Keyless OIDC authentication requires id-token: write permission
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: project-60bff6c1-455a-4a5c-b3d
+  REGION: us-central1
+  CLUSTER_NAME: web-cluster
+  REGISTRY: us-central1-docker.pkg.dev/project-60bff6c1-455a-4a5c-b3d/vigil-repo
+  WIF_PROVIDER: projects/839536206392/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+  WIF_SERVICE_ACCOUNT: github-actions-deployer@project-60bff6c1-455a-4a5c-b3d.iam.gserviceaccount.com
+
+jobs:
+  # ── Step 1: Detect which packages changed ──────────────────────────────────
+  detect-changes:
+    name: Detect Changed Services
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      agent: ${{ steps.filter.outputs.agent }}
+      app: ${{ steps.filter.outputs.app }}
+      web: ${{ steps.filter.outputs.web }}
+      k8s: ${{ steps.filter.outputs.k8s }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Path Filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            api:
+              - 'packages/api/**'
+              - 'packages/shared/**'
+              - 'prisma/**'
+            agent:
+              - 'packages/agent/**'
+              - 'packages/shared/**'
+            app:
+              - 'packages/app/**'
+            web:
+              - 'packages/web/**'
+            k8s:
+              - 'iac/k8s/**'
+
+  # ── Step 2: Build & Push only changed container images in parallel ─────────
+  build-api:
+    name: Build & Push API
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud via WIF
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push vigil-api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packages/api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/vigil-api:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/vigil-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-agent:
+    name: Build & Push Agent
+    needs: detect-changes
+    if: needs.detect-changes.outputs.agent == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud via WIF
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push vigil-agent
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packages/agent/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/vigil-agent:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/vigil-agent:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-app:
+    name: Build & Push App (Dashboard)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud via WIF
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push vigil-app
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packages/app/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/vigil-app:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/vigil-app:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-web:
+    name: Build & Push Web (Landing Page)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud via WIF
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push vigil-web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packages/web/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/vigil-web:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/vigil-web:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Step 3: Deploy to GKE & Verify Zero-Downtime Rollout ───────────────────
+  deploy:
+    name: Deploy to GKE
+    needs: [detect-changes, build-api, build-agent, build-app, build-web]
+    if: always() && (needs.build-api.result == 'success' || needs.build-agent.result == 'success' || needs.build-app.result == 'success' || needs.build-web.result == 'success' || needs.detect-changes.outputs.k8s == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud via WIF
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+
+      - name: Connect to GKE Cluster
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER_NAME }}
+          location: ${{ env.REGION }}
+
+      # If Kubernetes manifests changed, apply them first
+      - name: Apply Kubernetes Manifests
+        if: needs.detect-changes.outputs.k8s == 'true'
+        run: |
+          kubectl apply -f iac/k8s/00-namespace.yaml
+          kubectl apply -f iac/k8s/01-sealed-secrets.yaml
+          kubectl apply -f iac/k8s/03-apps.yaml
+          kubectl apply -f iac/k8s/04-ingress.yaml
+          kubectl apply -f iac/k8s/05-backend-config.yaml
+          kubectl apply -f iac/k8s/06-managed-certificate.yaml
+          kubectl apply -f iac/k8s/07-frontend-config.yaml
+          kubectl apply -f iac/k8s/08-hpa.yaml
+
+      # Update deployment images to the immutable Git SHA tag
+      - name: Deploy vigil-api
+        if: needs.build-api.result == 'success'
+        run: |
+          kubectl set image deployment/vigil-api api=${{ env.REGISTRY }}/vigil-api:sha-${{ github.sha }} -n vigil
+
+      - name: Deploy vigil-agent
+        if: needs.build-agent.result == 'success'
+        run: |
+          kubectl set image deployment/vigil-agent agent=${{ env.REGISTRY }}/vigil-agent:sha-${{ github.sha }} -n vigil
+
+      - name: Deploy vigil-app
+        if: needs.build-app.result == 'success'
+        run: |
+          kubectl set image deployment/vigil-app app=${{ env.REGISTRY }}/vigil-app:sha-${{ github.sha }} -n vigil
+
+      - name: Deploy vigil-web
+        if: needs.build-web.result == 'success'
+        run: |
+          kubectl set image deployment/vigil-web web=${{ env.REGISTRY }}/vigil-web:sha-${{ github.sha }} -n vigil
+
+      # ── Zero-Downtime Rollout Verification Gate ────────────────────────────
+      - name: Verify Rollout Status (Zero-Downtime Gate)
+        run: |
+          echo "Verifying zero-downtime rollouts..."
+          if [ "${{ needs.build-api.result }}" = "success" ]; then
+            kubectl rollout status deployment/vigil-api -n vigil --timeout=180s
+          fi
+          if [ "${{ needs.build-agent.result }}" = "success" ]; then
+            kubectl rollout status deployment/vigil-agent -n vigil --timeout=180s
+          fi
+          if [ "${{ needs.build-app.result }}" = "success" ]; then
+            kubectl rollout status deployment/vigil-app -n vigil --timeout=180s
+          fi
+          if [ "${{ needs.build-web.result }}" = "success" ]; then
+            kubectl rollout status deployment/vigil-web -n vigil --timeout=180s
+          fi
+          echo "All deployed workloads are 100% healthy!"
+
+      # If rollout verification fails or times out, trigger automatic rollback
+      - name: Automatic Emergency Rollback on Failure
+        if: failure()
+        run: |
+          echo "⚠️ Rollout failed or timed out! Triggering automatic rollback to previous stable ReplicaSets..."
+          kubectl rollout undo deployment/vigil-api -n vigil || true
+          kubectl rollout undo deployment/vigil-agent -n vigil || true
+          kubectl rollout undo deployment/vigil-app -n vigil || true
+          kubectl rollout undo deployment/vigil-web -n vigil || true
+          echo "Rollback initiated. Check cluster events for details."
+          exit 1

@@ -84,11 +84,17 @@ spec:
   selector:
     matchLabels:
       app: vigil-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: vigil-api
     spec:
+      terminationGracePeriodSeconds: 45
       containers:
         - name: api
           image: us-central1-docker.pkg.dev/project-60bff6c1-455a-4a5c-b3d/vigil-repo/vigil-api:v2
@@ -145,6 +151,11 @@ spec:
               port: 8080
             initialDelaySeconds: 5
             periodSeconds: 10
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sleep", "15"]
+          
 ---
 apiVersion: v1
 kind: Service
@@ -171,11 +182,17 @@ spec:
   selector:
     matchLabels:
       app: vigil-app
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: vigil-app
     spec:
+      terminationGracePeriodSeconds: 45
       containers:
         - name: app
           image: us-central1-docker.pkg.dev/project-60bff6c1-455a-4a5c-b3d/vigil-repo/vigil-app:v2
@@ -189,6 +206,25 @@ spec:
               memory: "256Mi"
           ports:
             - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 2
+
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sleep", "15"]
 ---
 apiVersion: v1
 kind: Service
@@ -213,11 +249,17 @@ spec:
   selector:
     matchLabels:
       app: vigil-web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: vigil-web
     spec:
+      terminationGracePeriodSeconds: 45
       containers:
         - name: web
           image: us-central1-docker.pkg.dev/project-60bff6c1-455a-4a5c-b3d/vigil-repo/vigil-web:v3
@@ -237,6 +279,10 @@ spec:
               port: 80
             initialDelaySeconds: 2
             periodSeconds: 10
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sleep", "15"]
 ---
 apiVersion: v1
 kind: Service
