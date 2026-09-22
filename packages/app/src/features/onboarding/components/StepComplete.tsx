@@ -12,7 +12,13 @@ export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData: _summar
   const navigate = useNavigate();
   const { showToast } = useApp();
 
-  const handleJustGo = () => {
+  const handleJustGo = async () => {
+    try {
+      await fetch('/api/onboarding/complete', { method: 'POST' });
+    } catch {
+      // Best effort
+    }
+    localStorage.setItem('vigil_onboarding_completed', 'true');
     showToast('Setup complete! Welcome to Vigil Incident Command.', 'success');
     onFinish();
     navigate('/incidents');
