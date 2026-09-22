@@ -13,7 +13,7 @@ interface InvokeOptions {
 
 /**
  * Invokes Gemini LLM with exponential backoff and fallback models
- * (gemini-3.5-flash -> gemini-2.5-flash -> gemini-3.1-flash-lite) to handle transient 503 errors.
+ * (gemini-3.6-flash -> gemini-3.5-flash -> gemini-3.1-flash-lite) to handle transient 503 errors.
  */
 export async function invokeLlmWithRetryAndFallback(
     messages: BaseMessage[],
@@ -21,8 +21,8 @@ export async function invokeLlmWithRetryAndFallback(
 ): Promise<AIMessage> {
     const isEval = process.env.AGENT_EVAL === 'true';
     const models = isEval
-        ? ['gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash']
-        : ['gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];
+        ? ['gemini-3.1-flash-lite', 'gemini-3.6-flash', 'gemini-3.5-flash']
+        : ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite'];
     const { temperature = 0, tools, responseMimeType } = options;
     let lastError: any = null;
 

@@ -46,6 +46,8 @@ interface AppContextType {
   user: UserInfo | null;
   userOrgs: OrgInfo[];
   activeOrg: OrgInfo | null;
+  isOnboardingComplete: boolean;
+  setIsOnboardingComplete: (val: boolean) => void;
   setUser: (user: UserInfo | null) => void;
   
   // Organization Actions
@@ -101,6 +103,28 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [user, setUser] = useState<UserInfo | null>(null);
   const [userOrgs, setUserOrgs] = useState<OrgInfo[]>([]);
   const [activeOrg, setActiveOrg] = useState<OrgInfo | null>(null);
+
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('vigil_onboarding_completed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  React.useEffect(() => {
+    fetch('/api/onboarding/status')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.isComplete) {
+          setIsOnboardingComplete(true);
+          try {
+            localStorage.setItem('vigil_onboarding_completed', 'true');
+          } catch {}
+        }
+      })
+      .catch(() => {});
+  }, [activeOrg?.id]);
 
   const showToast = (message: string, type: 'success' | 'warning' | 'error') => {
     setToast({ message, type });
@@ -405,6 +429,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         user,
         userOrgs,
         activeOrg,
+        isOnboardingComplete,
+        setIsOnboardingComplete,
         setUser,
         
         refreshOrgs,

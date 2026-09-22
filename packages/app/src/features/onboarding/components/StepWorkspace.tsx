@@ -1,396 +1,279 @@
-import React, { useState } from 'react';
-import { Server, Sparkles, Copy, Check, ArrowRight, ShieldCheck, Building2, Plus, UserPlus, Users } from 'lucide-react';
-import { useApp } from '../../../context/AppContext';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Cpu, ExternalLink, Key } from 'lucide-react';
 
 interface StepWorkspaceProps {
   onNext: (data: any) => void;
 }
 
 export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext }) => {
-  const { activeOrg, userOrgs, createOrg, joinOrg, switchOrg } = useApp();
-
-  const [orgTab, setOrgTab] = useState<'current' | 'create' | 'join'>('current');
-  const [newOrgName, setNewOrgName] = useState('');
-  const [inviteInput, setInviteInput] = useState('');
-  const [isSubmittingOrg, setIsSubmittingOrg] = useState(false);
-
-  const [workspaceName, setWorkspaceName] = useState('Production Cluster');
-  const [apiBaseUrl, setApiBaseUrl] = useState(window.location.origin);
   const [geminiApiKey, setGeminiApiKey] = useState('');
-  const [geminiModel, setGeminiModel] = useState<'gemini-2.5-flash' | 'gemini-2.5-pro'>('gemini-2.5-flash');
-  const [copiedKey, setCopiedKey] = useState(false);
-  const [copiedInvite, setCopiedInvite] = useState(false);
+  const [geminiModel, setGeminiModel] = useState<'gemini-3.6-flash' | 'gemini-3.5-flash'>('gemini-3.6-flash');
+  const [serverEnvDetected, setServerEnvDetected] = useState(false);
+  const [serverKeyPreview, setServerKeyPreview] = useState<string | null>(null);
 
-  const copyToClipboard = async (text: string) => {
-    if (!text) return false;
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<{
+    success: boolean;
+    message: string;
+    latencyMs?: number;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/onboarding/status')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.integrations?.gemini?.configured) {
+          setServerEnvDetected(true);
+          setServerKeyPreview(data.integrations.gemini.keyPreview || 'Configured via cluster secret');
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleValidateKey = async () => {
+    setIsValidating(true);
+    setValidationResult(null);
+
     try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        return true;
+      const res = await fetch('/api/onboarding/validate-gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey: geminiApiKey.trim() || undefined,
+          model: geminiModel,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setValidationResult({
+          success: true,
+          message: data.message || `Successfully validated ${geminiModel}!`,
+          latencyMs: data.latencyMs,
+        });
       } else {
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        const successful = document.execCommand('copy');
-        document.body.removeChild(textArea);
-        return successful;
+        setValidationResult({
+          success: false,
+          message: data.error || 'Gemini API validation failed. Check your API key and permissions.',
+          latencyMs: data.latencyMs,
+        });
       }
-    } catch (err) {
-      console.error('Clipboard copy failed:', err);
-      return false;
+    } catch (err: any) {
+      setValidationResult({
+        success: false,
+        message: err.message || 'Network error attempting to reach Gemini validation service.',
+      });
+    } finally {
+      setIsValidating(false);
     }
   };
 
-  const handleCopyKey = async () => {
-    const keyToCopy = activeOrg?.api_key || '';
-    if (!keyToCopy) return;
-    const success = await copyToClipboard(keyToCopy);
-    if (success) {
-      setCopiedKey(true);
-      setTimeout(() => setCopiedKey(false), 2000);
-    }
-  };
-
-  const handleCopyInvite = async () => {
-    const codeToCopy = activeOrg?.invite_code || activeOrg?.api_key || activeOrg?.slug || '';
-    if (!codeToCopy) return;
-    const success = await copyToClipboard(codeToCopy);
-    if (success) {
-      setCopiedInvite(true);
-      setTimeout(() => setCopiedInvite(false), 2000);
-    }
-  };
-
-  const handleCreateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newOrgName.trim()) return;
-    setIsSubmittingOrg(true);
-    const success = await createOrg(newOrgName.trim());
-    setIsSubmittingOrg(false);
-    if (success) {
-      setNewOrgName('');
-      setOrgTab('current');
-    }
-  };
-
-  const handleJoinSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteInput.trim()) return;
-    setIsSubmittingOrg(true);
-    const success = await joinOrg(inviteInput.trim());
-    setIsSubmittingOrg(false);
-    if (success) {
-      setInviteInput('');
-      setOrgTab('current');
-    }
-  };
+  const isVerified = validationResult?.success === true;
 
   const handleProceed = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isVerified) return;
+
     onNext({
-      deploymentMode: 'self-hosted',
-      workspaceName,
-      apiBaseUrl,
-      llmProvider: 'gemini',
+      geminiApiKey: geminiApiKey.trim() || 'server_env',
       geminiModel,
-      apiKey: geminiApiKey,
-      orgId: activeOrg?.id,
-      orgKey: activeOrg?.api_key,
+      verified: true,
     });
   };
 
   return (
-    <form onSubmit={handleProceed} className="space-y-6 animate-fadeIn">
-      <div>
-        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-mono mb-2">
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Self-Hosted & Organization Context</span>
-        </div>
-        <h3 className="text-xl font-bold text-white font-display tracking-tight">
-          Organization & Gemini Reasoning Engine
-        </h3>
-        <p className="text-xs text-secondary/80 mt-0.5">
-          Select or set up your organization tenant, then configure your Google Gemini AI engine.
-        </p>
-      </div>
-
-      {/* Organization Setup Section */}
-      <div className="p-4 rounded-2xl bg-surface-container-low/80 border border-surface-container-high/60 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-container-high/40 pb-3">
-          <div className="flex items-center gap-2.5">
-            <Building2 className="w-4 h-4 text-primary" />
-            <span className="text-xs font-bold text-white uppercase tracking-wider">
-              Organization & Tenant Context
-            </span>
+    <form onSubmit={handleProceed} className="space-y-6 animate-fadeIn flex flex-col justify-between min-h-[480px]">
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-mono mb-2">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Step 1 of 4 • AI Reasoning Engine (Required)</span>
           </div>
-
-          {/* Org Tabs */}
-          <div className="flex items-center gap-1 bg-[#0c0e13] p-1 rounded-xl border border-surface-container-high">
-            <button
-              type="button"
-              onClick={() => setOrgTab('current')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                orgTab === 'current' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-secondary/70 hover:text-white'
-              }`}
-            >
-              <Users className="w-3 h-3" />
-              <span>Active Org</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setOrgTab('create')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                orgTab === 'create' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-secondary/70 hover:text-white'
-              }`}
-            >
-              <Plus className="w-3 h-3" />
-              <span>Create New</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setOrgTab('join')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                orgTab === 'join' ? 'bg-primary/20 text-primary border border-primary/30' : 'text-secondary/70 hover:text-white'
-              }`}
-            >
-              <UserPlus className="w-3 h-3" />
-              <span>Join Org</span>
-            </button>
-          </div>
+          <h3 className="text-xl font-bold text-white font-display tracking-tight">
+            Connect Google Gemini Engine
+          </h3>
+          <p className="text-xs text-secondary/80 mt-0.5">
+            Vigil uses Google Gemini to correlate anomalous telemetry spikes, inspect causal dependencies, and synthesize incident root causes.
+          </p>
         </div>
 
-        {/* Tab 1: Current Org Details */}
-        {orgTab === 'current' && (
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-[#0c0e13] border border-surface-container-high">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-white font-display">
-                    {activeOrg?.name || 'Default Organization'}
-                  </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                    {activeOrg?.role || 'OWNER'}
-                  </span>
-                </div>
-                <p className="text-[11px] font-mono text-secondary/70 mt-0.5">
-                  Slug: {activeOrg?.slug || 'default-org'}
-                </p>
+        {/* Model Selection Card */}
+        <div className="space-y-3">
+          <label className="block text-xs font-semibold text-white/90">
+            Select Gemini Reasoning Model
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setGeminiModel('gemini-3.6-flash')}
+              className={`p-4 rounded-xl border text-left transition-all relative ${
+                geminiModel === 'gemini-3.6-flash'
+                  ? 'bg-primary/10 border-primary shadow-sm shadow-primary/10'
+                  : 'bg-[#0c0e13] border-surface-container-high hover:border-surface-container-highest text-secondary'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-bold font-mono text-white">Gemini 3.6 Flash</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Recommended
+                </span>
               </div>
+              <p className="text-[11px] text-secondary/80 leading-relaxed">
+                Ultra-fast sub-second latency for live alert correlation and immediate incident triage reports.
+              </p>
+            </button>
 
-              {userOrgs.length > 1 && (
-                <select
-                  value={activeOrg?.id || ''}
-                  onChange={(e) => switchOrg(e.target.value)}
-                  className="bg-surface-container-high border border-surface-container-highest text-white text-xs rounded-lg px-2.5 py-1.5 focus:outline-none"
-                >
-                  {userOrgs.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.name} ({o.role})
-                    </option>
-                  ))}
-                </select>
+            <button
+              type="button"
+              onClick={() => setGeminiModel('gemini-3.5-flash')}
+              className={`p-4 rounded-xl border text-left transition-all ${
+                geminiModel === 'gemini-3.5-flash'
+                  ? 'bg-primary/10 border-primary shadow-sm shadow-primary/10'
+                  : 'bg-[#0c0e13] border-surface-container-high hover:border-surface-container-highest text-secondary'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-bold font-mono text-white">Gemini 3.5 Flash</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  Stable
+                </span>
+              </div>
+              <p className="text-[11px] text-secondary/80 leading-relaxed">
+                Proven multi-step reasoning for deep causal chain discovery across large microservice fleets.
+              </p>
+            </button>
+          </div>
+        </div>
+
+        {/* API Key Input Section */}
+        <div className="p-4 rounded-xl bg-surface-container-low/60 border border-surface-container-high/60 space-y-3.5">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-white/90 flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5 text-primary" />
+              <span>Google AI Studio API Key <span className="text-rose-400">*</span></span>
+            </label>
+            <a
+              href="https://aistudio.google.com/app/apikey"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11px] text-primary hover:underline flex items-center gap-1"
+            >
+              <span>Get Free Gemini Key</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+
+          {serverEnvDetected && !geminiApiKey && (
+            <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Cluster environment key detected ({serverKeyPreview})</span>
+              </span>
+              <span className="text-[10px] font-mono text-secondary/70">Click Test to Verify</span>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <input
+              type="password"
+              value={geminiApiKey}
+              onChange={(e) => {
+                setGeminiApiKey(e.target.value);
+                setValidationResult(null);
+              }}
+              placeholder={
+                serverEnvDetected
+                  ? 'Using cluster environment key (or paste a new key to override)'
+                  : 'AIzaSy... (Paste Google AI Studio API Key here)'
+              }
+              className="w-full bg-[#0c0e13] border border-surface-container-high rounded-lg px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-primary transition-all"
+            />
+
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={handleValidateKey}
+                disabled={isValidating || (!geminiApiKey.trim() && !serverEnvDetected)}
+                className={`px-4 py-2 rounded-lg font-semibold text-xs transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${
+                  isVerified
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    : 'bg-primary text-on-primary hover:brightness-110 shadow-md shadow-primary/20'
+                }`}
+              >
+                {isValidating ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Validating Gemini Key...</span>
+                  </>
+                ) : isVerified ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Key Verified & Active (Retest)</span>
+                  </>
+                ) : (
+                  <>
+                    <Cpu className="w-3.5 h-3.5" />
+                    <span>Validate & Test Key</span>
+                  </>
+                )}
+              </button>
+
+              {validationResult?.latencyMs && (
+                <span className="text-[11px] font-mono text-secondary/70">
+                  Latency: <strong className="text-white">{validationResult.latencyMs}ms</strong>
+                </span>
               )}
             </div>
-
-            {/* Keys Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="p-3 rounded-xl bg-[#0c0e13] border border-surface-container-high flex items-center justify-between">
-                <div className="overflow-hidden pr-2">
-                  <div className="text-[11px] font-semibold text-secondary/80">Org API Key</div>
-                  <div className="font-mono text-xs text-primary truncate mt-0.5">
-                    {activeOrg?.api_key || 'vgl_live_...'}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCopyKey}
-                  className="px-2.5 py-1 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-[11px] font-semibold text-white border border-surface-container-highest flex-shrink-0 flex items-center gap-1"
-                >
-                  {copiedKey ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                  <span>{copiedKey ? 'Copied' : 'Copy'}</span>
-                </button>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#0c0e13] border border-surface-container-high flex items-center justify-between">
-                <div className="overflow-hidden pr-2">
-                  <div className="text-[11px] font-semibold text-secondary/80">Team Invite Code</div>
-                  <div className="font-mono text-xs text-emerald-400 truncate mt-0.5">
-                    {activeOrg?.invite_code || 'vigil_inv_...'}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCopyInvite}
-                  className="px-2.5 py-1 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-[11px] font-semibold text-white border border-surface-container-highest flex-shrink-0 flex items-center gap-1"
-                >
-                  {copiedInvite ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                  <span>{copiedInvite ? 'Copied' : 'Invite'}</span>
-                </button>
-              </div>
-            </div>
           </div>
-        )}
 
-        {/* Tab 2: Create Org Form */}
-        {orgTab === 'create' && (
-          <div className="p-3.5 rounded-xl bg-[#0c0e13] border border-surface-container-high space-y-3">
-            <h4 className="text-xs font-bold text-white">Create a New Organization</h4>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newOrgName}
-                onChange={(e) => setNewOrgName(e.target.value)}
-                placeholder="e.g. Acme Corp Infrastructure"
-                className="flex-1 bg-surface-container-low border border-surface-container-high rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary"
-              />
-              <button
-                type="button"
-                onClick={handleCreateSubmit}
-                disabled={isSubmittingOrg || !newOrgName.trim()}
-                className="px-4 py-2 bg-primary text-on-primary font-bold text-xs rounded-lg disabled:opacity-50 hover:brightness-110"
-              >
-                {isSubmittingOrg ? 'Creating...' : 'Create & Switch'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Tab 3: Join Org Form */}
-        {orgTab === 'join' && (
-          <div className="p-3.5 rounded-xl bg-[#0c0e13] border border-surface-container-high space-y-3">
-            <h4 className="text-xs font-bold text-white">Join an Existing Organization</h4>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={inviteInput}
-                onChange={(e) => setInviteInput(e.target.value)}
-                placeholder="Paste Invite Code (vigil_inv_...) or Org Slug"
-                className="flex-1 bg-surface-container-low border border-surface-container-high rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary"
-              />
-              <button
-                type="button"
-                onClick={handleJoinSubmit}
-                disabled={isSubmittingOrg || !inviteInput.trim()}
-                className="px-4 py-2 bg-primary text-on-primary font-bold text-xs rounded-lg disabled:opacity-50 hover:brightness-110"
-              >
-                {isSubmittingOrg ? 'Joining...' : 'Join Org'}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Self-Hosted Architecture Card */}
-      <div className="p-4 rounded-xl bg-surface-container-low/60 border border-primary/30 flex items-center justify-between transition-all">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-            <Server className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 font-bold text-xs text-white">
-              Self-Hosted Instance (Docker / Kubernetes)
-            </div>
-            <p className="text-[11px] text-secondary/70">
-              Telemetry metrics, incident checkpoints, and ChromaDB runbooks remain isolated inside your cluster.
-            </p>
-          </div>
-        </div>
-        <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full whitespace-nowrap">
-          VPC Isolated
-        </span>
-      </div>
-
-      {/* Workspace Inputs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-semibold text-white/80 mb-1.5">Workspace Name</label>
-          <input
-            type="text"
-            required
-            value={workspaceName}
-            onChange={(e) => setWorkspaceName(e.target.value)}
-            className="w-full bg-[#0c0e13] border border-surface-container-high rounded-lg px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-primary transition-all font-sans"
-            placeholder="e.g. Production Cluster"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-white/80 mb-1.5">Vigil API Host URL</label>
-          <input
-            type="text"
-            required
-            value={apiBaseUrl}
-            onChange={(e) => setApiBaseUrl(e.target.value)}
-            className="w-full bg-[#0c0e13] border border-surface-container-high rounded-lg px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-primary font-mono transition-all"
-            placeholder="http://localhost:3000"
-          />
-        </div>
-      </div>
-
-      {/* Google Gemini Model Picker */}
-      <div className="p-4 rounded-xl bg-surface-container-low/60 border border-surface-container-high/60 space-y-3.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-xs font-bold text-white uppercase tracking-wider">
-              Reasoning Engine (Google Gemini)
-            </span>
-          </div>
-          <span className="text-[10px] font-mono text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
-            LangGraph Node Engine
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2.5">
-          {(['gemini-2.5-flash', 'gemini-2.5-pro'] as const).map((model) => (
-            <button
-              key={model}
-              type="button"
-              onClick={() => setGeminiModel(model)}
-              className={`p-3 rounded-lg border text-left transition-all ${
-                geminiModel === model
-                  ? 'bg-primary/10 border-primary text-white shadow-sm'
-                  : 'bg-[#0c0e13] border-surface-container-high text-secondary hover:text-white'
+          {/* Validation Result Box */}
+          {validationResult && (
+            <div
+              className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 animate-fadeIn ${
+                validationResult.success
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                  : 'bg-status-critical/10 border-status-critical/30 text-rose-300'
               }`}
             >
-              <div className="text-xs font-bold font-mono">
-                {model === 'gemini-2.5-flash' ? 'Gemini 2.5 Flash' : 'Gemini 2.5 Pro'}
+              {validationResult.success ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+              )}
+              <div>
+                <div className="font-semibold">
+                  {validationResult.success ? 'Engine Authenticated & Ready' : 'Validation Failed'}
+                </div>
+                <div className="text-[11px] opacity-90 mt-0.5">{validationResult.message}</div>
               </div>
-              <div className="text-[10px] text-secondary/70 mt-0.5">
-                {model === 'gemini-2.5-flash' ? 'Ultra-fast sub-second RCA generation' : 'Deep reasoning for complex cascades'}
-              </div>
-            </button>
-          ))}
-        </div>
-
-        <div>
-          <label className="block text-[11px] text-secondary/80 mb-1">
-            Gemini API Key (<span className="font-mono text-white">GEMINI_API_KEY</span>)
-          </label>
-          <input
-            type="password"
-            value={geminiApiKey}
-            onChange={(e) => setGeminiApiKey(e.target.value)}
-            placeholder="AIzaSy... (Leave empty to use GEMINI_API_KEY from environment)"
-            className="w-full bg-[#0c0e13] border border-surface-container-high rounded-lg px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary transition-all"
-          />
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Next Action */}
-      <div className="flex justify-end pt-2">
+      {/* Sticky Bottom Navigation Footer */}
+      <div className="sticky bottom-0 bg-[#111318]/95 backdrop-blur-md pt-4 pb-1 border-t border-surface-container-high/60 z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="text-xs text-secondary/80 flex items-center gap-1.5">
+          {!isVerified ? (
+            <span className="text-amber-400/90 font-medium flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5" />
+              Key verification required to unlock next step
+            </span>
+          ) : (
+            <span className="text-emerald-400 font-medium flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Gemini AI reasoning verified
+            </span>
+          )}
+        </div>
+
         <button
           type="submit"
-          className="px-6 py-2.5 rounded-xl bg-primary text-on-primary font-bold text-xs hover:brightness-110 shadow-lg shadow-primary/20 transition-all flex items-center gap-2"
+          disabled={!isVerified}
+          className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary text-on-primary font-bold text-xs hover:brightness-110 shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <span>Continue to Slack Integration</span>
+          <span>Continue to Telemetry Ingestion</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

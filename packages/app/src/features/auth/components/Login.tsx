@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Terminal } from 'lucide-react';
 import VigilLogo from '../../../components/ui/VigilLogo';
 
 export const Login: React.FC = () => {
@@ -8,6 +8,28 @@ export const Login: React.FC = () => {
     const handleGoogleLogin = () => {
         setIsLoading(true);
         window.location.href = '/api/auth/google';
+    };
+
+    const handleDevLogin = async () => {
+        setIsLoading(true);
+        try {
+            const res = await fetch('/api/auth/dev-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({}),
+            });
+            if (res.ok) {
+                const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                window.location.href = isLocalhost ? '/' : '/app';
+            } else {
+                alert('Local dev login failed. Ensure Vigil API is running.');
+            }
+        } catch (err) {
+            console.error('Dev login error:', err);
+            alert('Failed to reach local API.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -136,6 +158,23 @@ export const Login: React.FC = () => {
                             )}
                         </button>
                         
+                        {/* Divider */}
+                        <div className="flex items-center gap-3 my-4 w-full">
+                            <div className="h-px bg-surface-container-high flex-1" />
+                            <span className="text-[11px] font-mono text-secondary/60 uppercase tracking-wider">or</span>
+                            <div className="h-px bg-surface-container-high flex-1" />
+                        </div>
+
+                        {/* Local One-Click Dev Sign In */}
+                        <button
+                            type="button"
+                            onClick={handleDevLogin}
+                            disabled={isLoading}
+                            className="w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/30 active:scale-[0.99] text-xs font-bold text-primary transition-all shadow-md group"
+                        >
+                            <Terminal className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                            <span>Quick Sign In (Local Dev / Demo)</span>
+                        </button>
                     </div>
                 </div>
             </div>

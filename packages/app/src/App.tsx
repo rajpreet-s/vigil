@@ -10,7 +10,7 @@ import { OnboardingWizard } from './features/onboarding/components/OnboardingWiz
 import { Login } from './features/auth/components/Login';
 
 function AppContent() {
-    const { user, setUser } = useApp();
+    const { user, setUser, isOnboardingComplete, setIsOnboardingComplete } = useApp();
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -62,22 +62,34 @@ function AppContent() {
                     path="/" 
                     element={isAuthenticated ? <DashboardLayout /> : <Navigate to="/login" replace />}
                 >
-                    {/* Redirect root to /incidents */}
-                    <Route index element={<Navigate to="/incidents" replace />} />
+                    {/* Redirect root: if setup incomplete, route to /onboarding */}
+                    <Route index element={<Navigate to={isOnboardingComplete ? "/incidents" : "/onboarding"} replace />} />
 
                     {/* Tab/Route Pages */}
-                    <Route path="incidents" element={<IncidentsMonitor />} />
+                    <Route 
+                        path="incidents" 
+                        element={isOnboardingComplete ? <IncidentsMonitor /> : <Navigate to="/onboarding" replace />} 
+                    />
                     <Route path="topology" element={<TopologyGraph />} />
                     <Route path="runbooks" element={<RunbookSearch />} />
                     <Route path="evals" element={<EvalSuite />} />
-                    <Route path="onboarding" element={<OnboardingWizard />} />
+                    <Route 
+                        path="onboarding" 
+                        element={
+                            <OnboardingWizard 
+                                onComplete={() => {
+                                    setIsOnboardingComplete(true);
+                                }} 
+                            />
+                        } 
+                    />
 
-                    {/* Catch-all redirect to incidents */}
-                    <Route path="*" element={<Navigate to="/incidents" replace />} />
+                    {/* Catch-all redirect */}
+                    <Route path="*" element={<Navigate to={isOnboardingComplete ? "/incidents" : "/onboarding"} replace />} />
                 </Route>
 
                 {/* Outer catch-all */}
-                <Route path="*" element={<Navigate to={isAuthenticated ? "/incidents" : "/login"} replace />} />
+                <Route path="*" element={<Navigate to={isAuthenticated ? (isOnboardingComplete ? "/incidents" : "/onboarding") : "/login"} replace />} />
             </Routes>
         </BrowserRouter>
     );

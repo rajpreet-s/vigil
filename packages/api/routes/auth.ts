@@ -282,6 +282,89 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         }
     );
 
+    // POST /api/auth/dev-login - One-click local developer sign-in
+    fastify.post(
+        '/auth/dev-login',
+        {
+            schema: {
+                description: 'Local development and demo login without external Google OAuth redirect dependencies.',
+                tags: ['Authentication'],
+            },
+        },
+        async (request, reply) => {
+            const devEmail = 'admin@vigil.internal';
+            const devName = 'Vigil Admin';
+            const googleId = 'dev-local-admin-id';
+
+            const user = await fastify.prisma.user.upsert({
+                where: { googleId },
+                update: {
+                    email: devEmail,
+                    name: devName,
+                },
+                create: {
+                    googleId,
+                    email: devEmail,
+                    name: devName,
+                },
+            });
+
+            let membership = await fastify.prisma.organizationMember.findFirst({
+                where: { user_id: user.id },
+                include: { org: true },
+            });
+
+            if (!membership) {
+                const orgName = 'Acme Infrastructure';
+                const slug = `acme-infra-${crypto.randomBytes(4).toString('hex')}`;
+                const apiKey = `vgl_live_${crypto.randomBytes(24).toString('hex')}`;
+                const inviteCode = `vigil_inv_${crypto.randomBytes(12).toString('hex')}`;
+
+                const newOrg = await fastify.prisma.organization.create({
+                    data: {
+                        name: orgName,
+                        slug,
+                        api_key: apiKey,
+                        invite_code: inviteCode,
+                    },
+                });
+
+                membership = await fastify.prisma.organizationMember.create({
+                    data: {
+                        org_id: newOrg.id,
+                        user_id: user.id,
+                        role: 'OWNER',
+                    },
+                    include: { org: true },
+                });
+            }
+
+            const sessionPayload: UserPayload = {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                picture: null,
+                org_id: membership.org_id,
+                org_role: membership.role,
+            };
+
+            const token = fastify.jwt.sign(sessionPayload, { expiresIn: '7d' });
+
+            reply.setCookie('session_token', token, {
+                path: '/',
+                httpOnly: true,
+                secure: false,
+                sameSite: 'lax',
+                maxAge: 7 * 24 * 60 * 60,
+            });
+
+            return reply.send({
+                success: true,
+                user: sessionPayload,
+            });
+        }
+    );
+
     // POST /api/auth/logout
     fastify.post(
         '/auth/logout',
