@@ -18,4 +18,6 @@ export const INCIDENT_HARD_MAX_DURATION_MS = 5 * 60 * 1000; // 5 minutes
  * The debounce delay (in milliseconds) to wait after the last anomaly
  * is grouped into the incident before triggering analysis.
  */
-export const INCIDENT_SETTLE_DELAY_MS = 90 * 1000; // 90 seconds
+export const INCIDENT_SETTLE_DELAY_MS = process.env.INCIDENT_SETTLE_DELAY_MS
+    ? parseInt(process.env.INCIDENT_SETTLE_DELAY_MS, 10)
+    : 15 * 1000; // 15 seconds default for fast live demo response

@@ -19,14 +19,11 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                 const servicesCount = await fastify.prisma.service.count();
                 const anomalyCount = await fastify.prisma.anomaly.count();
 
-                const botToken = process.env.SLACK_BOT_TOKEN;
-                const incidentsChannel = process.env.SLACK_INCIDENTS_CHANNEL;
-                const oncallUserId = process.env.SLACK_ONCALL_USER_ID;
-                const signingSecret = process.env.SLACK_SIGNING_SECRET;
+                const webhookUrl = process.env.SLACK_WEBHOOK_URL;
                 const geminiKey = process.env.GEMINI_API_KEY;
 
                 const hasGemini = !!geminiKey && geminiKey.trim().length > 0;
-                const hasSlack = !!botToken && botToken.trim().length > 0;
+                const hasSlack = !!webhookUrl && webhookUrl.trim().length > 0;
                 const hasTopology = topologyCount > 0;
                 const hasRunbooks = runbooksCount > 0;
                 const hasWebhooks = anomalyCount > 0;
@@ -45,12 +42,7 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                         },
                         slack: {
                             configured: hasSlack,
-                            env: {
-                                botToken: botToken ? `${botToken.slice(0, 15)}...` : null,
-                                incidentsChannel: incidentsChannel || null,
-                                oncallUserId: oncallUserId || null,
-                                signingSecret: signingSecret ? 'configured' : null,
-                            },
+                            webhookUrl: webhookUrl || null,
                         },
                         prometheus: { 
                             configured: hasWebhooks, 
@@ -153,99 +145,61 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
         }
     );
 
-    // POST /api/onboarding/test-slack - Authenticate Slack Bot Token or test Incoming Webhook
+    // POST /api/onboarding/test-slack - Test Slack Incoming Webhook
     fastify.post(
         '/onboarding/test-slack',
         {
             schema: {
-                description: 'Tests Slack Bot authentication via WebClient (auth.test) or Slack Incoming Webhook.',
+                description: 'Tests Slack Incoming Webhook.',
                 tags: ['Onboarding'],
                 body: {
                     type: 'object',
                     properties: {
                         webhookUrl: { type: 'string' },
-                        botToken: { type: 'string' },
-                        incidentsChannel: { type: 'string' },
-                        oncallUserId: { type: 'string' },
-                        signingSecret: { type: 'string' },
+                        rca_summary: { type: 'string' },
                     },
                 },
             },
         },
         async (request, reply) => {
             const body = (request.body as any) || {};
+            const webhookUrl = (body.webhookUrl && body.webhookUrl.trim()) || process.env.SLACK_WEBHOOK_URL;
 
-            // 1. Incoming Webhook URL flow (simplest, zero scopes needed)
-            if (body.webhookUrl && typeof body.webhookUrl === 'string' && body.webhookUrl.startsWith('https://hooks.slack.com/')) {
-                try {
-                    const res = await fetch(body.webhookUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            text: '⚡ *Vigil SRE Copilot Connected!* Real-time incident RCA reports and triage alerts will be broadcast to this channel.',
-                        }),
-                    });
-
-                    if (res.ok) {
-                        return reply.send({
-                            success: true,
-                            botName: 'Slack Webhook',
-                            message: 'Successfully broadcast test alert via Slack Incoming Webhook!',
-                        });
-                    } else {
-                        const errText = await res.text();
-                        return reply.status(400).send({
-                            success: false,
-                            error: `Slack webhook returned HTTP ${res.status}: ${errText}`,
-                        });
-                    }
-                } catch (err: any) {
-                    return reply.status(500).send({
-                        success: false,
-                        error: err.message || 'Failed to send payload to Slack Incoming Webhook.',
-                    });
-                }
-            }
-
-            // 2. Bot Token Flow (xoxb-...)
-            const token = body.botToken || process.env.SLACK_BOT_TOKEN;
-            const targetChannel = body.incidentsChannel || process.env.SLACK_INCIDENTS_CHANNEL || process.env.SLACK_ONCALL_USER_ID;
-
-            if (!token) {
+            if (!webhookUrl || !webhookUrl.startsWith('https://hooks.slack.com/')) {
                 return reply.status(400).send({
                     success: false,
-                    error: 'Provide a valid SLACK_BOT_TOKEN (starts with xoxb-) or an Incoming Webhook URL.',
+                    error: 'Provide a valid Slack Incoming Webhook URL (starts with https://hooks.slack.com/).',
                 });
             }
 
             try {
-                const client = new WebClient(token);
-                const authTest = await client.auth.test();
-                const botName = authTest.user || authTest.bot_id || 'VigilBot';
+                const messageText = body.rca_summary
+                    ? `[VIGIL INCIDENT RCA REPORT DISPATCHED]\n\n${body.rca_summary}`
+                    : '[VIGIL] SRE Copilot Connected. Real-time incident RCA reports and triage alerts will be broadcast to this channel.';
 
-                if (targetChannel) {
-                    const customText = body.rca_summary || body.text;
-                    const messageText = customText
-                        ? `🚨 *VIGIL INCIDENT RCA REPORT DISPATCHED*\n\n${customText}`
-                        : `⚡ *Vigil SRE Copilot Connected!* \nAuthenticated successfully as *@${botName}*. Incoming incident alerts will be routed here.`;
+                const res = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: messageText }),
+                });
 
-                    await client.chat.postMessage({
-                        channel: targetChannel,
-                        text: messageText,
+                if (res.ok) {
+                    process.env.SLACK_WEBHOOK_URL = webhookUrl;
+                    return reply.send({
+                        success: true,
+                        message: 'Connected to Slack webhook successfully. Test alert sent.',
+                    });
+                } else {
+                    const errText = await res.text();
+                    return reply.status(400).send({
+                        success: false,
+                        error: `Slack webhook returned HTTP ${res.status}: ${errText}`,
                     });
                 }
-
-                return reply.send({
-                    success: true,
-                    botName,
-                    team: authTest.team,
-                    message: `Successfully authenticated Slack Bot (@${botName}) and verified channel communication!`,
-                });
             } catch (err: any) {
-                fastify.log.error(err, 'Slack auth.test failed');
-                return reply.status(400).send({
+                return reply.status(500).send({
                     success: false,
-                    error: err.message || 'Slack WebClient authentication failed. Ensure SLACK_BOT_TOKEN starts with xoxb-.',
+                    error: err.message || 'Failed to send payload to Slack Incoming Webhook.',
                 });
             }
         }

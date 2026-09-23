@@ -332,19 +332,35 @@ const incidentsRoutes: FastifyPluginAsync = async (fastify) => {
                             updateData.resolved_at = new Date();
                         }
                         if (upperStatus === 'APPROVED') {
-                            const botToken = process.env.SLACK_BOT_TOKEN;
-                            const targetChannel = process.env.SLACK_INCIDENTS_CHANNEL || process.env.SLACK_ONCALL_USER_ID;
-                            if (botToken && targetChannel) {
+                            const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+                            const reportContent = rca_summary || existing.rca_summary || 'Incident marked resolved by operator.';
+                            const messageText = `[VIGIL INCIDENT RCA REPORT DISPATCHED]\nIncident ID: ${id} | Status: RESOLVED\n\n${reportContent}`;
+
+                            if (webhookUrl && webhookUrl.startsWith('https://hooks.slack.com/')) {
                                 try {
-                                    const client = new WebClient(botToken);
-                                    const reportContent = rca_summary || existing.rca_summary || 'Incident marked resolved by operator.';
-                                    await client.chat.postMessage({
-                                        channel: targetChannel,
-                                        text: `🚨 *VIGIL INCIDENT RCA REPORT DISPATCHED*\n*Incident ID:* \`${id}\` | *Status:* RESOLVED\n\n${reportContent}`,
+                                    await fetch(webhookUrl, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ text: messageText }),
                                     });
                                     updateData.notification_sent = true;
                                 } catch (slackErr) {
-                                    fastify.log.error(slackErr, `Failed to dispatch Slack message for incident ${id}`);
+                                    fastify.log.error(slackErr, `Failed to dispatch Slack webhook for incident ${id}`);
+                                }
+                            } else {
+                                const botToken = process.env.SLACK_BOT_TOKEN;
+                                const targetChannel = process.env.SLACK_INCIDENTS_CHANNEL || process.env.SLACK_ONCALL_USER_ID;
+                                if (botToken && targetChannel) {
+                                    try {
+                                        const client = new WebClient(botToken);
+                                        await client.chat.postMessage({
+                                            channel: targetChannel,
+                                            text: messageText,
+                                        });
+                                        updateData.notification_sent = true;
+                                    } catch (slackErr) {
+                                        fastify.log.error(slackErr, `Failed to dispatch Slack message for incident ${id}`);
+                                    }
                                 }
                             }
                         }

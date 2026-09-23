@@ -38,23 +38,49 @@ export async function human_review_node(
         return {};
     }
 
-    // ── Phase 1: First invocation — send DM and suspend ──────────────────────
-    nodeLogger.info({ incidentId }, 'human_review_node: Phase 1 — building on-call DM');
+    // ── Phase 1: First invocation — send notification and suspend ──────────
+    nodeLogger.info({ incidentId }, 'human_review_node: Phase 1 — sending review notification');
 
-    const dmTarget =
-        process.env.SLACK_ONCALL_USER_ID ??
-        process.env.SLACK_INCIDENTS_CHANNEL ??
-        'C0000000000';
+    const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+    let sent = false;
 
-    try {
-        await slack.chat.postMessage({
-            channel: dmTarget,
-            text: `⚡ Vigil — Incident #${shortId(incidentId)} requires your review`,
-            blocks: buildDmBlocks(state),
-        });
-        nodeLogger.info({ incidentId, dmTarget }, 'human_review_node: DM sent');
-    } catch (err) {
-        throw new AgentError('human_review', 'Failed to send on-call Slack DM', err);
+    if (webhookUrl && webhookUrl.startsWith('https://hooks.slack.com/')) {
+        try {
+            const res = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: `[VIGIL] Incident #${shortId(incidentId)} requires your review in Vigil UI`,
+                    blocks: buildDmBlocks(state),
+                }),
+            });
+            if (res.ok) {
+                sent = true;
+                nodeLogger.info({ incidentId }, 'human_review_node: Review notification sent to Slack webhook');
+            } else {
+                nodeLogger.warn({ incidentId, status: res.status }, 'human_review_node: Slack webhook returned error status');
+            }
+        } catch (webhookErr) {
+            nodeLogger.warn({ incidentId, err: webhookErr }, 'human_review_node: Failed to send to Slack webhook');
+        }
+    }
+
+    if (!sent && process.env.SLACK_BOT_TOKEN) {
+        const dmTarget =
+            process.env.SLACK_ONCALL_USER_ID ??
+            process.env.SLACK_INCIDENTS_CHANNEL ??
+            'C0000000000';
+        try {
+            await slack.chat.postMessage({
+                channel: dmTarget,
+                text: `[VIGIL] Incident #${shortId(incidentId)} requires your review in Vigil UI`,
+                blocks: buildDmBlocks(state),
+            });
+            sent = true;
+            nodeLogger.info({ incidentId, dmTarget }, 'human_review_node: DM sent via bot token');
+        } catch (err) {
+            nodeLogger.warn({ incidentId, err }, 'human_review_node: Failed to send Slack bot DM');
+        }
     }
 
     try {
@@ -123,7 +149,7 @@ function buildDmBlocks(state: typeof AgentStateSchema.State): KnownBlock[] {
         // ── Header ────────────────────────────────────────────────────────────
         {
             type: 'header',
-            text: { type: 'plain_text', text: `⚡ Vigil — Incident #${id}`, emoji: true },
+            text: { type: 'plain_text', text: `[VIGIL] Incident #${id}`, emoji: false },
         },
         {
             type: 'context',
@@ -177,7 +203,7 @@ function buildDmBlocks(state: typeof AgentStateSchema.State): KnownBlock[] {
             elements: [
                 {
                     type: 'button',
-                    text: { type: 'plain_text', text: '✅ Approve — send to #all-vigil', emoji: true },
+                    text: { type: 'plain_text', text: 'Approve (Publish to Slack)', emoji: false },
                     style: 'primary',
                     value: 'approved',
                     action_id: `approve:${incidentId}`,
@@ -185,7 +211,7 @@ function buildDmBlocks(state: typeof AgentStateSchema.State): KnownBlock[] {
                         title: { type: 'plain_text', text: 'Approve this RCA?' },
                         text: {
                             type: 'mrkdwn',
-                            text: 'This will post the analysis to #all-vigil and mark the incident approved.',
+                            text: 'This will post the analysis to Slack and mark the incident approved.',
                         },
                         confirm: { type: 'plain_text', text: 'Yes, approve' },
                         deny: { type: 'plain_text', text: 'Cancel' },
@@ -193,7 +219,7 @@ function buildDmBlocks(state: typeof AgentStateSchema.State): KnownBlock[] {
                 },
                 {
                     type: 'button',
-                    text: { type: 'plain_text', text: '✗ Dismiss', emoji: true },
+                    text: { type: 'plain_text', text: 'Dismiss', emoji: false },
                     style: 'danger',
                     value: 'dismissed',
                     action_id: `dismiss:${incidentId}`,
@@ -234,5 +260,5 @@ function runbookHint(
     const title = (top.metadata?.title as string) ?? 'Runbook';
     const distance = top.metadata?.distance != null ? Number(top.metadata.distance) : null;
     const match = distance !== null ? ` (${Math.round((1 - distance) * 100)}% match)` : '';
-    return `📖 Runbook: _${title}${match}_`;
+    return `Runbook: _${title}${match}_`;
 }

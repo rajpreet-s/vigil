@@ -342,9 +342,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const handleApproveSlack = async () => {
     if (!selectedIncidentId) return;
     try {
-      const approvedMessage = draftRcaReport.includes(':white_check_mark: *Approved*')
+      const approvedMessage = draftRcaReport.includes('[APPROVED]')
         ? draftRcaReport
-        : `${draftRcaReport}\n\n:white_check_mark: *Approved* · ${new Date().toUTCString()} · \`${selectedIncidentId}\``;
+        : `${draftRcaReport}\n\n[APPROVED] Approved · ${new Date().toUTCString()} · \`${selectedIncidentId}\``;
 
       // 1. Dispatch real Slack broadcast if Slack plugin is configured
       try {
@@ -367,7 +367,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setSelectedIncident((prev) => (prev ? { ...prev, status: 'resolved' } : null));
         setIncidents((prev) => prev.map((inc) => (inc.id === selectedIncidentId ? { ...inc, status: 'resolved' } : inc)));
         setDraftRcaReport(approvedMessage);
-        showToast(`⚡ Incident ${selectedIncidentId} approved! RCA report broadcasted to Slack.`, 'success');
+        showToast(`Incident ${selectedIncidentId} approved. RCA report broadcast to Slack.`, 'success');
       }
     } catch (err) {
       console.error('Failed to approve incident:', err);

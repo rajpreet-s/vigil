@@ -48,7 +48,7 @@ export async function retrieval_node(
         const documents = results.documents?.[0] ?? [];
         const metadatas  = results.metadatas?.[0]  ?? [];
 
-        const runbookChunks = documents.map((content, idx) => ({
+        const runbookChunks = (documents as (string | null)[]).map((content: string | null, idx: number) => ({
             content,
             metadata: metadatas[idx] ?? null,
         }));

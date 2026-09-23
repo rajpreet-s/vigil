@@ -227,13 +227,14 @@ OUTPUT INSTRUCTIONS:
 
 Return ONLY a valid JSON object. No markdown fences, no explanation text outside the JSON.
 All string values must be valid Slack mrkdwn. Use *bold* for service/metric names and \`backticks\` for metric/command names.
+Do NOT use emojis anywhere in your response. Keep all output clean and professional.
 
 {
   "q1WhatBroke": "<N> service(s) degraded in cascade:\n• *service_name* (\`metric_name\`) · HH:MM UTC\n• ...\n(list each anomalous service from the Q1 timeline chronologically. If timeline is empty: 'Insufficient topology data to establish cascade.')",
 
   "q2WhatCausedIt": "Root cause: *service_name* — \`metric_name\` first triggered at HH:MM UTC\ncascade: *svc1* (HH:MM UTC) → *svc2* (HH:MM UTC) → ...\nConfidence: *HIGH|MEDIUM|LOW* · topology-confirmed cascade\n(If root cause unknown: 'Root cause not conclusively identified. Confidence: *LOW*.')",
 
-  "q3DidWeCauseIt": "<one of two forms>:\n  If deploy preceded anomaly: '⚠️ *service_name* deployed N min before first anomaly · @author · N files changed'\n  If no deploy:               '✅ No deploy found within the 30-minute window'",
+  "q3DidWeCauseIt": "<one of two forms>:\n  If deploy preceded anomaly: '[DEPLOY] *service_name* deployed N min before first anomaly · @author · N files changed'\n  If no deploy:               '[NO DEPLOY] No deploy found within the 30-minute window'",
 
   "fixSteps": [
     "<Specific CLI command or action verbatim from the runbook excerpts above — not generic advice>",

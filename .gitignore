@@ -37,3 +37,5 @@ terraform.rc
 *secrets.yaml
 !*secrets.example.yaml
 !*sealed-secrets.yaml
+
+dist

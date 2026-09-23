@@ -20,6 +20,7 @@ export class WebhookService {
     public async processAlert(alert: AlertPayload, orgId?: string): Promise<void> {
         const serviceName = alert.labels.service;
         const alertName = alert.labels.alertname;
+        this.logger?.info(`[VIGIL INGEST] Alert received: service=${serviceName}, alertname=${alertName}, severity=${alert.labels.severity}`);
 
         const formattedDisplayName = serviceName
             .replace(/[-_]/g, ' ')
