@@ -15,4 +15,12 @@ export default async function alertmanagerWebhookRoutes(fastify: FastifyInstance
         },
         handleAlertmanagerWebhook
     );
+
+    fastify.post(
+        "/alertmanager/:apiKey",
+        {
+            schema: alertmanagerWebhookSchema,
+        },
+        handleAlertmanagerWebhook
+    );
 }

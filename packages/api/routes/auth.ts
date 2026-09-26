@@ -282,61 +282,157 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         }
     );
 
-    // POST /api/auth/dev-login - One-click local developer sign-in
+    // POST /api/auth/dev-login - One-click local developer / demo sign-in
     fastify.post(
         '/auth/dev-login',
         {
             schema: {
                 description: 'Local development and demo login without external Google OAuth redirect dependencies.',
                 tags: ['Authentication'],
+                response: {
+                    200: {
+                        type: 'object',
+                        properties: {
+                            success: { type: 'boolean' },
+                            user: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    email: { type: 'string' },
+                                    name: { type: 'string', nullable: true },
+                                    picture: { type: 'string', nullable: true },
+                                    org_id: { type: 'string' },
+                                    org_role: { type: 'string' },
+                                },
+                            },
+                        },
+                    },
+                    403: {
+                        type: 'object',
+                        properties: {
+                            error: { type: 'string' },
+                        },
+                    },
+                },
             },
         },
         async (request, reply) => {
-            const devEmail = 'admin@vigil.internal';
-            const devName = 'Vigil Admin';
-            const googleId = 'dev-local-admin-id';
+            // Production guardrail: Never allow quick sign-in in production environments
+            const isProduction = process.env.NODE_ENV === 'production' && process.env.ENABLE_DEV_LOGIN !== 'true';
+            if (isProduction) {
+                return reply.status(403).send({
+                    error: 'Developer quick sign-in is disabled in production environments.',
+                });
+            }
 
+            const demoEmail = process.env.DEMO_USER_EMAIL || 'demo@vigil.internal';
+            const demoName = process.env.DEMO_USER_NAME || 'Demo SRE (Local Dev)';
+            const googleId = 'vigil-demo-account-id';
+
+            // 1. Upsert dedicated Demo User account
             const user = await fastify.prisma.user.upsert({
-                where: { googleId },
+                where: { email: demoEmail },
                 update: {
-                    email: devEmail,
-                    name: devName,
+                    name: demoName,
+                    googleId,
                 },
                 create: {
                     googleId,
-                    email: devEmail,
-                    name: devName,
+                    email: demoEmail,
+                    name: demoName,
                 },
             });
 
-            let membership = await fastify.prisma.organizationMember.findFirst({
-                where: { user_id: user.id },
-                include: { org: true },
+            // 2. Identify or provision the dedicated Demo Organization (isolated from all other accounts)
+            let demoOrg = await fastify.prisma.organization.findUnique({
+                where: { slug: 'vigil-demo' },
+            });
+
+            if (!demoOrg) {
+                demoOrg = await fastify.prisma.organization.create({
+                    data: {
+                        name: 'Demo Organization',
+                        slug: 'vigil-demo',
+                        api_key: `vgl_live_demo_${crypto.randomBytes(20).toString('hex')}`,
+                        invite_code: `vigil_inv_demo_${crypto.randomBytes(6).toString('hex')}`,
+                        gemini_api_key: process.env.GEMINI_API_KEY || null,
+                        gemini_model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
+                        slack_webhook_url: process.env.SLACK_WEBHOOK_URL || null,
+                    },
+                });
+            }
+
+            // 3. Ensure Demo User has OWNER membership on Demo Organization
+            let membership = await fastify.prisma.organizationMember.findUnique({
+                where: {
+                    org_id_user_id: {
+                        org_id: demoOrg.id,
+                        user_id: user.id,
+                    },
+                },
             });
 
             if (!membership) {
-                const orgName = 'Acme Infrastructure';
-                const slug = `acme-infra-${crypto.randomBytes(4).toString('hex')}`;
-                const apiKey = `vgl_live_${crypto.randomBytes(24).toString('hex')}`;
-                const inviteCode = `vigil_inv_${crypto.randomBytes(12).toString('hex')}`;
-
-                const newOrg = await fastify.prisma.organization.create({
-                    data: {
-                        name: orgName,
-                        slug,
-                        api_key: apiKey,
-                        invite_code: inviteCode,
-                    },
-                });
-
                 membership = await fastify.prisma.organizationMember.create({
                     data: {
-                        org_id: newOrg.id,
+                        org_id: demoOrg.id,
                         user_id: user.id,
                         role: 'OWNER',
                     },
-                    include: { org: true },
                 });
+            } else if (membership.role !== 'OWNER') {
+                membership = await fastify.prisma.organizationMember.update({
+                    where: { id: membership.id },
+                    data: { role: 'OWNER' },
+                });
+            }
+
+            // 5. Ensure standard topology edges exist for Demo Org if empty
+            const topologyCount = await fastify.prisma.topology.count({
+                where: { org_id: demoOrg.id },
+            });
+
+            if (topologyCount === 0) {
+                const presetEdges = [
+                    { upstream: 'api-gateway', downstream: 'auth-service', description: 'User authentication & JWT validation' },
+                    { upstream: 'api-gateway', downstream: 'order-service', description: 'Order placement & checkout traffic' },
+                    { upstream: 'api-gateway', downstream: 'payment-service', description: 'Transaction and billing requests' },
+                    { upstream: 'order-service', downstream: 'payment-service', description: 'Synchronous payment authorization RPC' },
+                    { upstream: 'auth-service', downstream: 'postgres-db', description: 'User accounts & credentials storage' },
+                    { upstream: 'order-service', downstream: 'postgres-db', description: 'Order records & ledger persistence' },
+                    { upstream: 'payment-service', downstream: 'stripe-gateway', description: 'Outbound third-party payment processing' },
+                    { upstream: 'api-gateway', downstream: 'redis-cache', description: 'Rate-limiting & session cache' },
+                ];
+
+                for (const edge of presetEdges) {
+                    await fastify.prisma.service.upsert({
+                        where: { name: edge.upstream },
+                        create: { name: edge.upstream, display_name: edge.upstream, org_id: demoOrg.id },
+                        update: { org_id: demoOrg.id },
+                    });
+                    await fastify.prisma.service.upsert({
+                        where: { name: edge.downstream },
+                        create: { name: edge.downstream, display_name: edge.downstream, org_id: demoOrg.id },
+                        update: { org_id: demoOrg.id },
+                    });
+                    await fastify.prisma.topology.upsert({
+                        where: {
+                            upstream_service_downstream_service: {
+                                upstream_service: edge.upstream,
+                                downstream_service: edge.downstream,
+                            },
+                        },
+                        create: {
+                            upstream_service: edge.upstream,
+                            downstream_service: edge.downstream,
+                            description: edge.description,
+                            org_id: demoOrg.id,
+                        },
+                        update: {
+                            org_id: demoOrg.id,
+                        },
+                    });
+                }
             }
 
             const sessionPayload: UserPayload = {
@@ -344,7 +440,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
                 email: user.email,
                 name: user.name,
                 picture: null,
-                org_id: membership.org_id,
+                org_id: demoOrg.id,
                 org_role: membership.role,
             };
 
@@ -353,7 +449,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
             reply.setCookie('session_token', token, {
                 path: '/',
                 httpOnly: true,
-                secure: false,
+                secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
                 maxAge: 7 * 24 * 60 * 60,
             });

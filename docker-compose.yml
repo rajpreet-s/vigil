@@ -84,6 +84,7 @@ services:
             - DATABASE_URL=postgresql://docker:admin@db:5432/vigil
             - AGENT_URL=http://agent:3001
             - NODE_ENV=production
+            - ENABLE_DEV_LOGIN=true
             - PORT=8080
             - JWT_SECRET=${JWT_SECRET}
             - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}

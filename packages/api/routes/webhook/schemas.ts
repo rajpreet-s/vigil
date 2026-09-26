@@ -7,6 +7,22 @@ import type { FastifySchema } from "fastify";
  */
 export const alertmanagerWebhookSchema: FastifySchema = {
     tags: ["Webhooks"],
+    querystring: {
+        type: "object",
+        properties: {
+            api_key: { type: "string" },
+            apiKey: { type: "string" },
+            org_id: { type: "string" },
+        },
+        additionalProperties: true,
+    },
+    params: {
+        type: "object",
+        properties: {
+            apiKey: { type: "string" },
+        },
+        additionalProperties: true,
+    },
     body: {
         type: "object",
         required: ["alerts"],

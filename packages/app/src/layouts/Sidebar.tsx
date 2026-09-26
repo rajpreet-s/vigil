@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import VigilLogo from '../components/ui/VigilLogo';
 
 export const Sidebar: React.FC = () => {
-    const { incidents, user, setUser, activeOrg, userOrgs, switchOrg, createOrg, joinOrg } = useApp();
+    const { activeIncidentsCount, user, setUser, activeOrg, userOrgs, switchOrg, createOrg, joinOrg } = useApp();
 
     const [isOrgDropdownOpen, setIsOrgDropdownOpen] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -19,9 +19,6 @@ export const Sidebar: React.FC = () => {
 
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    const activeIncidentsCount = incidents.filter(
-        (i) => i.status !== 'resolved' && i.status !== 'approved' && i.status !== 'dismissed'
-    ).length;
     const isCompleted = localStorage.getItem('vigil_onboarding_completed') === 'true';
 
     useEffect(() => {

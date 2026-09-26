@@ -54,6 +54,7 @@ const incidentsRoutes: FastifyPluginAsync = async (fastify) => {
                             nextCursor: { type: 'string', nullable: true },
                             hasMore: { type: 'boolean' },
                             total: { type: 'number' },
+                            activeTotal: { type: 'number' },
                         },
                     },
                     401: {
@@ -135,6 +136,13 @@ const incidentsRoutes: FastifyPluginAsync = async (fastify) => {
                     where: orgId ? { org_id: orgId } : {},
                 });
 
+                const activeCount = await fastify.prisma.incident.count({
+                    where: {
+                        ...(orgId ? { org_id: orgId } : {}),
+                        status: { in: ['OPEN', 'PENDING_REVIEW', 'PROCESSING'] },
+                    },
+                });
+
                 const hasMore = incidents.length > limit;
                 const items = hasMore ? incidents.slice(0, limit) : incidents;
 
@@ -169,6 +177,7 @@ const incidentsRoutes: FastifyPluginAsync = async (fastify) => {
                     nextCursor,
                     hasMore,
                     total: totalCount,
+                    activeTotal: activeCount,
                 });
             } catch (err) {
                 fastify.log.error(err, 'Failed to fetch incidents list');

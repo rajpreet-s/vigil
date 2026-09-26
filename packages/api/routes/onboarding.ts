@@ -87,6 +87,11 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                     ? webhookUrl.replace(/(https:\/\/hooks\.slack\.com\/services\/[^\/]+\/[^\/]+\/).+/, '$1********')
                     : null;
 
+                const orgApiKey = org?.api_key || null;
+                const webhookEndpoint = orgApiKey
+                    ? `/api/webhook/alertmanager?api_key=${orgApiKey}`
+                    : '/api/webhook/alertmanager';
+
                 return reply.send({
                     status: 'OK',
                     isComplete,
@@ -94,6 +99,7 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                     orgRole: orgRole || (isOwner ? 'OWNER' : 'MEMBER'),
                     orgId: org?.id || null,
                     orgName: org?.name || null,
+                    orgApiKey,
                     integrations: {
                         gemini: {
                             configured: hasGemini,
@@ -107,7 +113,7 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                         },
                         prometheus: { 
                             configured: hasWebhooks, 
-                            endpoint: '/api/webhook/alertmanager', 
+                            endpoint: webhookEndpoint, 
                             anomalyCount 
                         },
                         topology: { configured: hasTopology, edgeCount: topologyCount },
@@ -309,6 +315,7 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
     // POST /api/onboarding/test-webhook & /api/onboarding/simulate-alert - Real anomaly ingestion
     const handleSimulateAlert = async (request: any, reply: any) => {
         try {
+            const { org } = await getAuthAndOrg(request, fastify);
             const body = request.body || {};
             const serviceName = body.service || 'payment-service';
             const alertName = body.alertname || 'High5xxRate';
@@ -329,7 +336,7 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
             };
 
             const webhookService = new WebhookService(fastify.prisma, request.log);
-            await webhookService.processAlert(sampleAlert);
+            await webhookService.processAlert(sampleAlert, org?.id);
 
             const totalAnomalies = await fastify.prisma.anomaly.count();
 

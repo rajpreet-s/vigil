@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Flame, Copy, Check, RefreshCw, ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Code } from 'lucide-react';
+import { Flame, Copy, Check, RefreshCw, ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Code, Shield } from 'lucide-react';
+import { useApp } from '../../../context/AppContext';
 
 interface StepPrometheusProps {
   onNext: (data: any) => void;
@@ -7,6 +8,7 @@ interface StepPrometheusProps {
 }
 
 export const StepPrometheus: React.FC<StepPrometheusProps> = ({ onNext, onBack }) => {
+  const { activeOrg } = useApp();
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedYaml, setCopiedYaml] = useState(false);
   const [showYaml, setShowYaml] = useState(false);
@@ -14,8 +16,19 @@ export const StepPrometheus: React.FC<StepPrometheusProps> = ({ onNext, onBack }
   const [alertConfigured, setAlertConfigured] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // Dynamic webhook endpoint matching current host/origin
-  const webhookEndpoint = `${window.location.origin}/api/webhook/alertmanager`;
+  // Scoped webhook endpoint containing the active organization's unique api_key
+  const apiKey = activeOrg?.api_key || '';
+  const isDockerHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  // URL for display / external Alertmanager instances
+  const webhookEndpoint = apiKey
+    ? `${window.location.origin}/api/webhook/alertmanager?api_key=${apiKey}`
+    : `${window.location.origin}/api/webhook/alertmanager`;
+
+  // Docker internal host for Alertmanager containers running on the same host
+  const dockerWebhookEndpoint = apiKey
+    ? `http://host.docker.internal:8080/api/webhook/alertmanager?api_key=${apiKey}`
+    : `http://host.docker.internal:8080/api/webhook/alertmanager`;
 
   const alertmanagerYaml = `global:
   resolve_timeout: 1m
@@ -39,7 +52,8 @@ route:
 receivers:
   - name: 'vigil-webhook'
     webhook_configs:
-      - url: '${webhookEndpoint}'
+      # If Alertmanager runs in Docker, use host.docker.internal; otherwise use your Vigil API hostname
+      - url: '${isDockerHost ? dockerWebhookEndpoint : webhookEndpoint}'
         send_resolved: true`;
 
   const handleCopyUrl = () => {
@@ -130,6 +144,12 @@ receivers:
               {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copiedUrl ? 'Copied' : 'Copy URL'}</span>
             </button>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-secondary/70 pt-1">
+            <Shield className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+            <span>
+              Scoped to <strong className="text-white">{activeOrg?.name || 'Your Organization'}</strong>. Alerts sent with this API key are routed directly and exclusively to this account.
+            </span>
           </div>
         </div>
 
