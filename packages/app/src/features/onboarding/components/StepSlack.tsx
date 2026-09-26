@@ -1,30 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, RefreshCw, ExternalLink, SkipForward, Link2 } from 'lucide-react';
+import { MessageSquare, ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, RefreshCw, ExternalLink, SkipForward, Link2, Lock } from 'lucide-react';
 
 interface StepSlackProps {
   onNext: (data: any) => void;
   onBack: () => void;
+  status?: any;
+  isOwner?: boolean;
 }
 
-export const StepSlack: React.FC<StepSlackProps> = ({ onNext, onBack }) => {
+export const StepSlack: React.FC<StepSlackProps> = ({ onNext, onBack, status, isOwner = true }) => {
   const [webhookUrl, setWebhookUrl] = useState('');
   const [serverSlackDetected, setServerSlackDetected] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; detail?: string } | null>(null);
 
+  const applyStatusData = (data: any) => {
+    if (data?.integrations?.slack?.configured) {
+      setServerSlackDetected(true);
+      if (data.integrations.slack.webhookUrl) {
+        setWebhookUrl(data.integrations.slack.webhookUrl);
+      }
+    }
+  };
+
   useEffect(() => {
-    fetch('/api/onboarding/status')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.integrations?.slack?.configured) {
-          setServerSlackDetected(true);
-        }
-        if (data.integrations?.slack?.webhookUrl) {
-          setWebhookUrl(data.integrations.slack.webhookUrl);
-        }
-      })
-      .catch(() => {});
-  }, []);
+    if (status) {
+      applyStatusData(status);
+    } else {
+      fetch('/api/onboarding/status')
+        .then((res) => res.json())
+        .then((data) => applyStatusData(data))
+        .catch(() => {});
+    }
+  }, [status]);
 
   const handleTestSlack = async () => {
     setIsTesting(true);
@@ -104,11 +112,18 @@ export const StepSlack: React.FC<StepSlackProps> = ({ onNext, onBack }) => {
           </a>
         </div>
 
+        {!isOwner && (
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-center gap-2">
+            <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
+            <span>Read-Only Mode: You are viewing company settings. Only organization Owners can change Slack Incoming Webhook settings.</span>
+          </div>
+        )}
+
         {serverSlackDetected && (
           <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center justify-between">
             <span className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Slack Webhook URL configured in environment</span>
+              <span>Slack Webhook URL configured in company settings</span>
             </span>
             <span className="text-[10px] font-mono text-secondary/70">Ready</span>
           </div>
@@ -128,12 +143,21 @@ export const StepSlack: React.FC<StepSlackProps> = ({ onNext, onBack }) => {
             <input
               type="text"
               value={webhookUrl}
+              disabled={!isOwner}
               onChange={(e) => {
-                setWebhookUrl(e.target.value);
-                setTestResult(null);
+                if (isOwner) {
+                  setWebhookUrl(e.target.value);
+                  setTestResult(null);
+                }
               }}
-              placeholder="https://hooks.slack.com/services/T000.../B000.../XXXXX"
-              className="w-full bg-[#0c0e13] border border-surface-container-high rounded-lg px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-primary transition-all"
+              placeholder={
+                !isOwner
+                  ? 'Configured by Organization Owner'
+                  : 'https://hooks.slack.com/services/T000.../B000.../XXXXX'
+              }
+              className={`w-full bg-[#0c0e13] border border-surface-container-high rounded-lg px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-primary transition-all ${
+                !isOwner ? 'opacity-60 cursor-not-allowed' : ''
+              }`}
             />
           </div>
           <p className="text-[11px] text-secondary/70">
@@ -152,7 +176,7 @@ export const StepSlack: React.FC<StepSlackProps> = ({ onNext, onBack }) => {
           <button
             type="button"
             onClick={handleTestSlack}
-            disabled={isTesting || (!webhookUrl.trim() && !serverSlackDetected)}
+            disabled={!isOwner || isTesting || (!webhookUrl.trim() && !serverSlackDetected)}
             className="px-4 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-xs font-bold text-primary border border-primary/30 transition-all disabled:opacity-40 flex items-center gap-2"
           >
             {isTesting ? (

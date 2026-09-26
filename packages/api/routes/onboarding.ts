@@ -1,6 +1,53 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { WebClient } from '@slack/web-api';
 import { WebhookService } from '../services/webhookService.js';
+import type { UserPayload } from '../plugins/auth.js';
+
+async function getAuthAndOrg(request: any, fastify: any) {
+    const token = request.cookies?.session_token;
+    let userId: string | null = null;
+    let orgId: string | null = null;
+    let orgRole: string | null = null;
+    let isOwner = false;
+
+    if (token) {
+        try {
+            const decoded = fastify.jwt.verify(token) as UserPayload;
+            userId = decoded.id;
+            orgId = decoded.org_id;
+            orgRole = decoded.org_role;
+            isOwner = orgRole === 'OWNER';
+        } catch (e) {
+            fastify.log.warn({ err: e }, 'Failed to verify session token in onboarding');
+        }
+    }
+
+    let org = null;
+    if (orgId) {
+        org = await fastify.prisma.organization.findUnique({
+            where: { id: orgId },
+        });
+    }
+
+    if (!org) {
+        // Fallback: pick the first organization in database
+        org = await fastify.prisma.organization.findFirst({
+            orderBy: { created_at: 'asc' },
+        });
+        if (!token) {
+            // Standalone dev/demo mode without auth cookie -> grant owner access
+            isOwner = true;
+            orgRole = 'OWNER';
+        }
+    }
+
+    return {
+        org,
+        userId,
+        orgRole,
+        isOwner,
+    };
+}
 
 const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
     // GET /api/onboarding/status - Check onboarding status & metrics
@@ -14,13 +61,18 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
         },
         async (request, reply) => {
             try {
-                const topologyCount = await fastify.prisma.topology.count();
+                const { org, orgRole, isOwner } = await getAuthAndOrg(request, fastify);
+
+                const topologyWhere = org?.id ? { OR: [{ org_id: org.id }, { org_id: null }] } : {};
+                const topologyCount = await fastify.prisma.topology.count({ where: topologyWhere });
                 const runbooksCount = await fastify.prisma.runbook.count();
                 const servicesCount = await fastify.prisma.service.count();
                 const anomalyCount = await fastify.prisma.anomaly.count();
 
-                const webhookUrl = process.env.SLACK_WEBHOOK_URL;
-                const geminiKey = process.env.GEMINI_API_KEY;
+                // Read Gemini & Slack settings from database (org-level), fallback to env
+                const geminiKey = org?.gemini_api_key || process.env.GEMINI_API_KEY || null;
+                const geminiModel = org?.gemini_model || process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+                const webhookUrl = org?.slack_webhook_url || process.env.SLACK_WEBHOOK_URL || null;
 
                 const hasGemini = !!geminiKey && geminiKey.trim().length > 0;
                 const hasSlack = !!webhookUrl && webhookUrl.trim().length > 0;
@@ -31,18 +83,27 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                 // Setup is considered complete if Gemini is configured (or verified) and Topology has at least 1 edge
                 const isComplete = (hasGemini || hasSlack) && hasTopology;
 
+                const maskedWebhook = hasSlack && webhookUrl
+                    ? webhookUrl.replace(/(https:\/\/hooks\.slack\.com\/services\/[^\/]+\/[^\/]+\/).+/, '$1********')
+                    : null;
+
                 return reply.send({
                     status: 'OK',
                     isComplete,
+                    isOwner,
+                    orgRole: orgRole || (isOwner ? 'OWNER' : 'MEMBER'),
+                    orgId: org?.id || null,
+                    orgName: org?.name || null,
                     integrations: {
                         gemini: {
                             configured: hasGemini,
-                            model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
-                            keyPreview: hasGemini ? `${geminiKey!.slice(0, 8)}...` : null,
+                            model: geminiModel,
+                            keyPreview: isOwner ? (hasGemini ? `${geminiKey!.slice(0, 8)}...` : null) : null,
+                            apiKey: isOwner ? (geminiKey || '') : null,
                         },
                         slack: {
                             configured: hasSlack,
-                            webhookUrl: webhookUrl || null,
+                            webhookUrl: isOwner ? (webhookUrl || null) : maskedWebhook,
                         },
                         prometheus: { 
                             configured: hasWebhooks, 
@@ -61,12 +122,12 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
         }
     );
 
-    // POST /api/onboarding/validate-gemini - Validates Google Gemini API Key
+    // POST /api/onboarding/validate-gemini - Validates Google Gemini API Key and persists at org level
     fastify.post(
         '/onboarding/validate-gemini',
         {
             schema: {
-                description: 'Validates Google Gemini API key by making a live lightweight prompt call.',
+                description: 'Validates Google Gemini API key by making a live lightweight prompt call and persists to org.',
                 tags: ['Onboarding'],
                 body: {
                     type: 'object',
@@ -78,9 +139,18 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
             },
         },
         async (request, reply) => {
+            const { org, isOwner } = await getAuthAndOrg(request, fastify);
+
+            if (!isOwner) {
+                return reply.status(403).send({
+                    success: false,
+                    error: 'Forbidden: Only organization owners can configure Gemini API keys.',
+                });
+            }
+
             const body = (request.body as any) || {};
-            const key = (body.apiKey && body.apiKey.trim()) || process.env.GEMINI_API_KEY;
-            let model = body.model || process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+            const key = (body.apiKey && body.apiKey.trim()) || org?.gemini_api_key || process.env.GEMINI_API_KEY;
+            let model = body.model || org?.gemini_model || process.env.GEMINI_MODEL || 'gemini-3.6-flash';
             if (model === 'gemini-2.5-flash' || model === 'gemini-2.5-pro') {
                 model = 'gemini-3.6-flash';
             }
@@ -129,11 +199,24 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                     });
                 }
 
+                // Persist validated Gemini key & model to organization
+                if (org) {
+                    await fastify.prisma.organization.update({
+                        where: { id: org.id },
+                        data: {
+                            gemini_api_key: key,
+                            gemini_model: model,
+                        },
+                    });
+                }
+                process.env.GEMINI_API_KEY = key;
+                process.env.GEMINI_MODEL = model;
+
                 return reply.send({
                     success: true,
                     model,
                     latencyMs,
-                    message: `Verified Gemini AI Engine (${model}) in ${latencyMs}ms!`,
+                    message: `Verified Gemini AI Engine (${model}) in ${latencyMs}ms! Saved to organization settings.`,
                 });
             } catch (err: any) {
                 fastify.log.error(err, 'Gemini validation request failed');
@@ -145,12 +228,12 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
         }
     );
 
-    // POST /api/onboarding/test-slack - Test Slack Incoming Webhook
+    // POST /api/onboarding/test-slack - Test Slack Incoming Webhook and persist to org
     fastify.post(
         '/onboarding/test-slack',
         {
             schema: {
-                description: 'Tests Slack Incoming Webhook.',
+                description: 'Tests Slack Incoming Webhook and saves to organization.',
                 tags: ['Onboarding'],
                 body: {
                     type: 'object',
@@ -162,8 +245,17 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
             },
         },
         async (request, reply) => {
+            const { org, isOwner } = await getAuthAndOrg(request, fastify);
+
+            if (!isOwner) {
+                return reply.status(403).send({
+                    success: false,
+                    error: 'Forbidden: Only organization owners can configure Slack Incoming Webhook.',
+                });
+            }
+
             const body = (request.body as any) || {};
-            const webhookUrl = (body.webhookUrl && body.webhookUrl.trim()) || process.env.SLACK_WEBHOOK_URL;
+            const webhookUrl = (body.webhookUrl && body.webhookUrl.trim()) || org?.slack_webhook_url || process.env.SLACK_WEBHOOK_URL;
 
             if (!webhookUrl || !webhookUrl.startsWith('https://hooks.slack.com/')) {
                 return reply.status(400).send({
@@ -184,10 +276,19 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                 });
 
                 if (res.ok) {
+                    // Persist Slack webhook URL to organization in PostgreSQL
+                    if (org) {
+                        await fastify.prisma.organization.update({
+                            where: { id: org.id },
+                            data: {
+                                slack_webhook_url: webhookUrl,
+                            },
+                        });
+                    }
                     process.env.SLACK_WEBHOOK_URL = webhookUrl;
                     return reply.send({
                         success: true,
-                        message: 'Connected to Slack webhook successfully. Test alert sent.',
+                        message: 'Connected to Slack webhook successfully. Test alert sent and saved to organization.',
                     });
                 } else {
                     const errText = await res.text();
@@ -258,7 +359,11 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
         },
         async (request, reply) => {
             try {
+                const { org } = await getAuthAndOrg(request, fastify);
+                const whereClause = org?.id ? { OR: [{ org_id: org.id }, { org_id: null }] } : {};
+
                 const edges = await fastify.prisma.topology.findMany({
+                    where: whereClause,
                     orderBy: { created_at: 'desc' },
                 });
 
@@ -306,18 +411,27 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
         },
         async (request, reply) => {
             try {
+                const { org, isOwner } = await getAuthAndOrg(request, fastify);
+
+                if (!isOwner) {
+                    return reply.status(403).send({
+                        success: false,
+                        error: 'Forbidden: Only organization owners can modify service topology.',
+                    });
+                }
+
                 const { edges } = request.body as { edges: Array<{ upstream: string; downstream: string; description?: string }> };
 
                 const created = [];
                 for (const edge of edges) {
                     await fastify.prisma.service.upsert({
                         where: { name: edge.upstream },
-                        create: { name: edge.upstream, display_name: edge.upstream },
+                        create: { name: edge.upstream, display_name: edge.upstream, org_id: org?.id || null },
                         update: {},
                     });
                     await fastify.prisma.service.upsert({
                         where: { name: edge.downstream },
-                        create: { name: edge.downstream, display_name: edge.downstream },
+                        create: { name: edge.downstream, display_name: edge.downstream, org_id: org?.id || null },
                         update: {},
                     });
 
@@ -332,16 +446,20 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                             upstream_service: edge.upstream,
                             downstream_service: edge.downstream,
                             description: edge.description || 'Configured via Onboarding Wizard',
+                            org_id: org?.id || null,
                         },
                         update: {
                             description: edge.description || 'Configured via Onboarding Wizard',
+                            org_id: org?.id || null,
                         },
                     });
                     created.push(topo);
                 }
 
                 // Fetch full updated list from DB
+                const whereClause = org?.id ? { OR: [{ org_id: org.id }, { org_id: null }] } : {};
                 const allEdges = await fastify.prisma.topology.findMany({
+                    where: whereClause,
                     orderBy: { created_at: 'desc' },
                 });
 
@@ -379,6 +497,15 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
         },
         async (request, reply) => {
             try {
+                const { org, isOwner } = await getAuthAndOrg(request, fastify);
+
+                if (!isOwner) {
+                    return reply.status(403).send({
+                        success: false,
+                        error: 'Forbidden: Only organization owners can modify service topology.',
+                    });
+                }
+
                 const { upstream, downstream } = request.body as { upstream: string; downstream: string };
 
                 await fastify.prisma.topology.deleteMany({
@@ -388,7 +515,9 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                     },
                 });
 
+                const whereClause = org?.id ? { OR: [{ org_id: org.id }, { org_id: null }] } : {};
                 const allEdges = await fastify.prisma.topology.findMany({
+                    where: whereClause,
                     orderBy: { created_at: 'desc' },
                 });
 
@@ -427,6 +556,15 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
         },
         async (request, reply) => {
             try {
+                const { org, isOwner } = await getAuthAndOrg(request, fastify);
+
+                if (!isOwner) {
+                    return reply.status(403).send({
+                        success: false,
+                        error: 'Forbidden: Only organization owners can upload runbooks.',
+                    });
+                }
+
                 const { title, service_name, content } = request.body as {
                     title: string;
                     service_name?: string;
@@ -441,6 +579,7 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                         title,
                         service_name: service_name || null,
                         file_path: `onboarding_${title.toLowerCase().replace(/[^a-z0-9]/g, '_')}.md`,
+                        org_id: org?.id || null,
                     },
                 });
 
@@ -469,6 +608,15 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
         },
         async (request, reply) => {
             try {
+                const { org, isOwner } = await getAuthAndOrg(request, fastify);
+
+                if (!isOwner) {
+                    return reply.status(403).send({
+                        success: false,
+                        error: 'Forbidden: Only organization owners can apply preset topology.',
+                    });
+                }
+
                 const presetEdges = [
                     { upstream: 'api-gateway', downstream: 'auth-service', description: 'User authentication & JWT validation' },
                     { upstream: 'api-gateway', downstream: 'order-service', description: 'Order placement & checkout traffic' },
@@ -483,12 +631,12 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                 for (const edge of presetEdges) {
                     await fastify.prisma.service.upsert({
                         where: { name: edge.upstream },
-                        create: { name: edge.upstream, display_name: edge.upstream },
+                        create: { name: edge.upstream, display_name: edge.upstream, org_id: org?.id || null },
                         update: {},
                     });
                     await fastify.prisma.service.upsert({
                         where: { name: edge.downstream },
-                        create: { name: edge.downstream, display_name: edge.downstream },
+                        create: { name: edge.downstream, display_name: edge.downstream, org_id: org?.id || null },
                         update: {},
                     });
 
@@ -503,14 +651,18 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                             upstream_service: edge.upstream,
                             downstream_service: edge.downstream,
                             description: edge.description,
+                            org_id: org?.id || null,
                         },
                         update: {
                             description: edge.description,
+                            org_id: org?.id || null,
                         },
                     });
                 }
 
+                const whereClause = org?.id ? { OR: [{ org_id: org.id }, { org_id: null }] } : {};
                 const allEdges = await fastify.prisma.topology.findMany({
+                    where: whereClause,
                     orderBy: { created_at: 'desc' },
                 });
 

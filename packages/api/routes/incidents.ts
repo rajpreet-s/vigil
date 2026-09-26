@@ -332,7 +332,15 @@ const incidentsRoutes: FastifyPluginAsync = async (fastify) => {
                             updateData.resolved_at = new Date();
                         }
                         if (upperStatus === 'APPROVED') {
-                            const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+                            let webhookUrl = process.env.SLACK_WEBHOOK_URL;
+                            if (existing.org_id) {
+                                const org = await fastify.prisma.organization.findUnique({
+                                    where: { id: existing.org_id },
+                                });
+                                if (org?.slack_webhook_url) {
+                                    webhookUrl = org.slack_webhook_url;
+                                }
+                            }
                             const reportContent = rca_summary || existing.rca_summary || 'Incident marked resolved by operator.';
                             const messageText = `[VIGIL INCIDENT RCA REPORT DISPATCHED]\nIncident ID: ${id} | Status: RESOLVED\n\n${reportContent}`;
 

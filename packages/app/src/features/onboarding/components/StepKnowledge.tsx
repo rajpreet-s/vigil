@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Network, Plus, Trash2, ArrowRight, ArrowLeft, CheckCircle2, RefreshCw, Layers, Sparkles } from 'lucide-react';
+import { Network, Plus, Trash2, ArrowRight, ArrowLeft, CheckCircle2, RefreshCw, Layers, Sparkles, Lock } from 'lucide-react';
 
 interface StepKnowledgeProps {
   onNext: (data: any) => void;
   onBack: () => void;
+  isOwner?: boolean;
 }
 
-export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack }) => {
+export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack, isOwner = true }) => {
   // Topology state
   const [upstream, setUpstream] = useState('');
   const [downstream, setDownstream] = useState('');
@@ -32,6 +33,7 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack }) 
   }, []);
 
   const handleApplyPreset = async () => {
+    if (!isOwner) return;
     setIsApplyingPreset(true);
     setTopoMsg(null);
     try {
@@ -56,7 +58,7 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack }) 
 
   const handleAddEdge = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!upstream || !downstream) return;
+    if (!isOwner || !upstream || !downstream) return;
 
     setIsSavingTopo(true);
     setTopoMsg(null);
@@ -85,6 +87,7 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack }) 
   };
 
   const handleRemoveEdge = async (edgeToDelete: { upstream: string; downstream: string }) => {
+    if (!isOwner) return;
     try {
       const res = await fetch('/api/onboarding/topology', {
         method: 'DELETE',
@@ -117,6 +120,13 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack }) 
         </p>
       </div>
 
+      {!isOwner && (
+        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-center gap-2">
+          <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
+          <span>Read-Only Mode: You are viewing company topology. Only organization Owners can add, remove, or modify service dependencies.</span>
+        </div>
+      )}
+
       {/* 1-Click Architecture Preset Card */}
       <div className="p-4 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start gap-3">
@@ -137,7 +147,7 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack }) 
         <button
           type="button"
           onClick={handleApplyPreset}
-          disabled={isApplyingPreset}
+          disabled={!isOwner || isApplyingPreset}
           className="px-4 py-2 bg-primary text-on-primary font-bold text-xs rounded-lg hover:brightness-110 shadow-md shadow-primary/20 transition-all flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-50"
         >
           {isApplyingPreset ? (
@@ -165,31 +175,40 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack }) 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <input
               type="text"
-              placeholder="Upstream (e.g. api-gateway)"
+              placeholder={isOwner ? "Upstream (e.g. api-gateway)" : "Configured by Owner"}
               value={upstream}
+              disabled={!isOwner}
               onChange={(e) => setUpstream(e.target.value)}
-              className="bg-[#0c0e13] border border-surface-container-high rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary font-mono"
+              className={`bg-[#0c0e13] border border-surface-container-high rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary font-mono ${
+                !isOwner ? 'opacity-60 cursor-not-allowed' : ''
+              }`}
             />
             <input
               type="text"
-              placeholder="Downstream (e.g. order-service)"
+              placeholder={isOwner ? "Downstream (e.g. order-service)" : "Configured by Owner"}
               value={downstream}
+              disabled={!isOwner}
               onChange={(e) => setDownstream(e.target.value)}
-              className="bg-[#0c0e13] border border-surface-container-high rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary font-mono"
+              className={`bg-[#0c0e13] border border-surface-container-high rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary font-mono ${
+                !isOwner ? 'opacity-60 cursor-not-allowed' : ''
+              }`}
             />
             <input
               type="text"
               placeholder="Description (Optional)"
               value={description}
+              disabled={!isOwner}
               onChange={(e) => setDescription(e.target.value)}
-              className="bg-[#0c0e13] border border-surface-container-high rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary font-sans"
+              className={`bg-[#0c0e13] border border-surface-container-high rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary font-sans ${
+                !isOwner ? 'opacity-60 cursor-not-allowed' : ''
+              }`}
             />
           </div>
 
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={isSavingTopo || !upstream || !downstream}
+              disabled={!isOwner || isSavingTopo || !upstream || !downstream}
               className="px-3.5 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-white text-xs font-semibold border border-surface-container-highest flex items-center gap-1.5 transition-all disabled:opacity-50"
             >
               <Plus className="w-3.5 h-3.5 text-primary" />
@@ -217,7 +236,9 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack }) 
 
         {edges.length === 0 && !isLoadingTopo ? (
           <div className="text-center py-5 text-xs text-secondary/70">
-            No topology edges configured yet. Click <strong className="text-primary">Apply Microservices Preset</strong> above to automatically load 8 core service dependencies.
+            No topology edges configured yet. {isOwner ? 'Click ' : ''}
+            {isOwner && <strong className="text-primary">Apply Microservices Preset</strong>}
+            {isOwner ? ' above to automatically load 8 core service dependencies.' : 'Awaiting organization Owner configuration.'}
           </div>
         ) : (
           <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
@@ -238,14 +259,16 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack }) 
                       {e.description}
                     </span>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveEdge(e)}
-                    title="Delete edge from database"
-                    className="text-secondary/50 hover:text-red-400 transition-colors p-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {isOwner && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveEdge(e)}
+                      title="Delete edge from database"
+                      className="text-secondary/50 hover:text-red-400 transition-colors p-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

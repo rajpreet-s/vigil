@@ -9,6 +9,8 @@ interface InvokeOptions {
     temperature?: number;
     tools?: StructuredToolInterface[];
     responseMimeType?: "application/json" | "text/plain";
+    apiKey?: string;
+    model?: string;
 }
 
 /**
@@ -20,9 +22,11 @@ export async function invokeLlmWithRetryAndFallback(
     options: InvokeOptions = {}
 ): Promise<AIMessage> {
     const isEval = process.env.AGENT_EVAL === 'true';
-    const models = isEval
-        ? ['gemini-3.1-flash-lite', 'gemini-3.6-flash', 'gemini-3.5-flash']
-        : ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite'];
+    const preferredModel = options.model || (isEval ? 'gemini-3.1-flash-lite' : 'gemini-3.6-flash');
+    const standardCandidates = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite'];
+    const models = [preferredModel, ...standardCandidates.filter((m) => m !== preferredModel)];
+    const activeApiKey = options.apiKey || process.env.GEMINI_API_KEY;
+
     const { temperature = 0, tools, responseMimeType } = options;
     let lastError: any = null;
 
@@ -37,7 +41,7 @@ export async function invokeLlmWithRetryAndFallback(
                 llmLogger.info({ model, attempt: attempts }, 'Invoking LLM');
                 let llm: any = new ChatGoogleGenerativeAI({
                     model,
-                    apiKey: process.env.GEMINI_API_KEY,
+                    apiKey: activeApiKey,
                     temperature,
                     maxRetries: 1,
                     maxOutputTokens: 2048,

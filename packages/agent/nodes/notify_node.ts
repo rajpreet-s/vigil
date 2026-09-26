@@ -25,7 +25,7 @@ export async function notify_node(
 
     nodeLogger.info({ incidentId }, 'notify_node: posting approved RCA to Slack');
 
-    const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+    const webhookUrl = state.orgConfig?.slackWebhookUrl || process.env.SLACK_WEBHOOK_URL;
     let broadcastTs: string | undefined;
 
     // ── 1. Post to Slack (Webhook URL preferred, Bot Token fallback) ─────────

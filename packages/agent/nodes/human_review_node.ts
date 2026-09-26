@@ -41,7 +41,7 @@ export async function human_review_node(
     // ── Phase 1: First invocation — send notification and suspend ──────────
     nodeLogger.info({ incidentId }, 'human_review_node: Phase 1 — sending review notification');
 
-    const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+    const webhookUrl = state.orgConfig?.slackWebhookUrl || process.env.SLACK_WEBHOOK_URL;
     let sent = false;
 
     if (webhookUrl && webhookUrl.startsWith('https://hooks.slack.com/')) {

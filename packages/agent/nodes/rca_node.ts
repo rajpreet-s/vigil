@@ -73,7 +73,12 @@ export async function rca_node(
         const response = await invokeLlmWithRetryAndFallback([
             new SystemMessage(systemPrompt),
             new HumanMessage('Produce the JSON RCA output now.'),
-        ], { temperature: 0, responseMimeType: 'application/json' });
+        ], {
+            temperature: 0,
+            responseMimeType: 'application/json',
+            apiKey: state.orgConfig?.geminiApiKey || undefined,
+            model: state.orgConfig?.geminiModel || undefined,
+        });
 
         rawText =
             typeof response.content === 'string'

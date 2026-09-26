@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Cpu, ExternalLink, Key } from 'lucide-react';
+import { Sparkles, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Cpu, ExternalLink, Key, Lock, Eye, EyeOff } from 'lucide-react';
 
 interface StepWorkspaceProps {
   onNext: (data: any) => void;
+  status?: any;
+  isOwner?: boolean;
 }
 
-export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext }) => {
+export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, isOwner = true }) => {
   const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
   const [geminiModel, setGeminiModel] = useState<'gemini-3.6-flash' | 'gemini-3.5-flash'>('gemini-3.6-flash');
   const [serverEnvDetected, setServerEnvDetected] = useState(false);
   const [serverKeyPreview, setServerKeyPreview] = useState<string | null>(null);
@@ -18,17 +21,36 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext }) => {
     latencyMs?: number;
   } | null>(null);
 
+  const applyStatusData = (data: any) => {
+    if (data?.integrations?.gemini?.configured) {
+      setServerEnvDetected(true);
+      const preview = isOwner ? data.integrations.gemini.keyPreview : null;
+      setServerKeyPreview(preview);
+      if (isOwner && data.integrations.gemini.apiKey) {
+        setGeminiApiKey(data.integrations.gemini.apiKey);
+      } else {
+        setGeminiApiKey('');
+      }
+      if (data.integrations.gemini.model === 'gemini-3.5-flash' || data.integrations.gemini.model === 'gemini-3.6-flash') {
+        setGeminiModel(data.integrations.gemini.model);
+      }
+      setValidationResult({
+        success: true,
+        message: `Gemini AI Engine (${data.integrations.gemini.model || 'gemini-3.6-flash'}) verified from organization settings.`,
+      });
+    }
+  };
+
   useEffect(() => {
-    fetch('/api/onboarding/status')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.integrations?.gemini?.configured) {
-          setServerEnvDetected(true);
-          setServerKeyPreview(data.integrations.gemini.keyPreview || 'Configured via cluster secret');
-        }
-      })
-      .catch(() => {});
-  }, []);
+    if (status) {
+      applyStatusData(status);
+    } else {
+      fetch('/api/onboarding/status')
+        .then((res) => res.json())
+        .then((data) => applyStatusData(data))
+        .catch(() => {});
+    }
+  }, [status]);
 
   const handleValidateKey = async () => {
     setIsValidating(true);
@@ -98,6 +120,13 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext }) => {
           </p>
         </div>
 
+        {!isOwner && (
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-center gap-2">
+            <Lock className="w-4 h-4 text-amber-400 flex-shrink-0" />
+            <span>Read-Only Mode: You are viewing company settings. Only organization Owners can change Gemini API credentials.</span>
+          </div>
+        )}
+
         {/* Model Selection Card */}
         <div className="space-y-3">
           <label className="block text-xs font-semibold text-white/90">
@@ -106,8 +135,9 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => setGeminiModel('gemini-3.6-flash')}
-              className={`p-4 rounded-xl border text-left transition-all relative ${
+              disabled={!isOwner}
+              onClick={() => isOwner && setGeminiModel('gemini-3.6-flash')}
+              className={`p-4 rounded-xl border text-left transition-all relative ${!isOwner ? 'opacity-80 cursor-default' : ''} ${
                 geminiModel === 'gemini-3.6-flash'
                   ? 'bg-primary/10 border-primary shadow-sm shadow-primary/10'
                   : 'bg-[#0c0e13] border-surface-container-high hover:border-surface-container-highest text-secondary'
@@ -126,8 +156,9 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext }) => {
 
             <button
               type="button"
-              onClick={() => setGeminiModel('gemini-3.5-flash')}
-              className={`p-4 rounded-xl border text-left transition-all ${
+              disabled={!isOwner}
+              onClick={() => isOwner && setGeminiModel('gemini-3.5-flash')}
+              className={`p-4 rounded-xl border text-left transition-all ${!isOwner ? 'opacity-80 cursor-default' : ''} ${
                 geminiModel === 'gemini-3.5-flash'
                   ? 'bg-primary/10 border-primary shadow-sm shadow-primary/10'
                   : 'bg-[#0c0e13] border-surface-container-high hover:border-surface-container-highest text-secondary'
@@ -164,37 +195,66 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext }) => {
             </a>
           </div>
 
-          {serverEnvDetected && !geminiApiKey && (
+          {serverEnvDetected && (
             <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Cluster environment key detected ({serverKeyPreview})</span>
+                <span>
+                  {isOwner
+                    ? `Cluster environment key detected ${serverKeyPreview ? `(${serverKeyPreview})` : ''}`
+                    : 'Gemini AI Engine credentials active (restricted to Owner)'}
+                </span>
               </span>
-              <span className="text-[10px] font-mono text-secondary/70">Click Test to Verify</span>
+              <span className="text-[10px] font-mono text-secondary/70">
+                {isOwner ? 'Owner Access' : 'Protected'}
+              </span>
             </div>
           )}
 
           <div className="space-y-2">
-            <input
-              type="password"
-              value={geminiApiKey}
-              onChange={(e) => {
-                setGeminiApiKey(e.target.value);
-                setValidationResult(null);
-              }}
-              placeholder={
-                serverEnvDetected
-                  ? 'Using cluster environment key (or paste a new key to override)'
-                  : 'AIzaSy... (Paste Google AI Studio API Key here)'
-              }
-              className="w-full bg-[#0c0e13] border border-surface-container-high rounded-lg px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-primary transition-all"
-            />
+            {!isOwner ? (
+              <input
+                type="password"
+                value=""
+                disabled
+                readOnly
+                placeholder="Configured by Organization Owner (Hidden for security)"
+                className="w-full bg-[#0c0e13] border border-surface-container-high rounded-lg px-3.5 py-2.5 text-xs text-secondary/60 font-mono opacity-60 cursor-not-allowed select-none"
+              />
+            ) : (
+              <div className="relative flex items-center">
+                <input
+                  type={showApiKey ? 'text' : 'password'}
+                  value={geminiApiKey}
+                  onChange={(e) => {
+                    setGeminiApiKey(e.target.value);
+                    setValidationResult(null);
+                  }}
+                  placeholder={
+                    serverEnvDetected
+                      ? 'Using cluster environment key (or paste a new key to override)'
+                      : 'AIzaSy... (Paste Google AI Studio API Key here)'
+                  }
+                  className="w-full bg-[#0c0e13] border border-surface-container-high rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-primary transition-all"
+                />
+                {geminiApiKey && (
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-3 text-secondary/60 hover:text-white transition-colors p-1"
+                    title={showApiKey ? 'Hide API Key' : 'Show API Key'}
+                  >
+                    {showApiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={handleValidateKey}
-                disabled={isValidating || (!geminiApiKey.trim() && !serverEnvDetected)}
+                disabled={!isOwner || isValidating || (!geminiApiKey.trim() && !serverEnvDetected)}
                 className={`px-4 py-2 rounded-lg font-semibold text-xs transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${
                   isVerified
                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
@@ -255,10 +315,10 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext }) => {
       {/* Sticky Bottom Navigation Footer */}
       <div className="sticky bottom-0 bg-[#111318]/95 backdrop-blur-md pt-4 pb-1 border-t border-surface-container-high/60 z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="text-xs text-secondary/80 flex items-center gap-1.5">
-          {!isVerified ? (
+          {!isVerified && !(serverEnvDetected && !isOwner) ? (
             <span className="text-amber-400/90 font-medium flex items-center gap-1">
               <AlertCircle className="w-3.5 h-3.5" />
-              Key verification required to unlock next step
+              {isOwner ? 'Key verification required to unlock next step' : 'Awaiting owner Gemini key configuration'}
             </span>
           ) : (
             <span className="text-emerald-400 font-medium flex items-center gap-1">
@@ -270,7 +330,7 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext }) => {
 
         <button
           type="submit"
-          disabled={!isVerified}
+          disabled={!isVerified && !(serverEnvDetected && !isOwner)}
           className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary text-on-primary font-bold text-xs hover:brightness-110 shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <span>Continue to Telemetry Ingestion</span>
