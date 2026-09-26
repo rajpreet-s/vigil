@@ -30,6 +30,8 @@ export interface OrgInfo {
 
 interface AppContextType {
   incidents: Incident[];
+  totalIncidents: number;
+  activeIncidentsCount: number;
   selectedIncidentId: string;
   selectedIncident: Incident | null;
   filterSeverity: 'all' | 'critical' | 'warning';
@@ -79,6 +81,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [totalIncidents, setTotalIncidents] = useState<number>(0);
+  const [activeIncidentsCount, setActiveIncidentsCount] = useState<number>(0);
   const [selectedIncidentId, setSelectedIncidentId] = useState<string>('');
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<'all' | 'critical' | 'warning'>('all');
@@ -136,6 +140,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const res = await fetch('/api/incidents');
       if (res.ok) {
         const data = await res.json();
+        if (typeof data.total === 'number') {
+          setTotalIncidents(data.total);
+        }
+        if (typeof data.activeTotal === 'number') {
+          setActiveIncidentsCount(data.activeTotal);
+        }
         if (data.data) {
           const formatted: Incident[] = data.data.map((item: any) => ({
             id: item.id,
@@ -151,6 +161,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             timeline: [],
           }));
           setIncidents(formatted);
+          if (typeof data.activeTotal !== 'number') {
+            setActiveIncidentsCount(formatted.filter((i) => i.status === 'reviewing').length);
+          }
         }
       }
     } catch (err) {
@@ -194,6 +207,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setDraftRcaReport('');
       setKbQuery('');
       setKbResults([]);
+      setTotalIncidents(0);
+      setActiveIncidentsCount(0);
       fetchIncidents();
     }
   }, [activeOrg?.id, fetchIncidents]);
@@ -342,9 +357,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const handleApproveSlack = async () => {
     if (!selectedIncidentId) return;
     try {
-      const approvedMessage = draftRcaReport.includes(':white_check_mark: *Approved*')
+      const approvedMessage = draftRcaReport.includes('[APPROVED]')
         ? draftRcaReport
-        : `${draftRcaReport}\n\n:white_check_mark: *Approved* · ${new Date().toUTCString()} · \`${selectedIncidentId}\``;
+        : `${draftRcaReport}\n\n[APPROVED] Approved · ${new Date().toUTCString()} · \`${selectedIncidentId}\``;
 
       // 1. Dispatch real Slack broadcast if Slack plugin is configured
       try {
@@ -367,7 +382,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setSelectedIncident((prev) => (prev ? { ...prev, status: 'resolved' } : null));
         setIncidents((prev) => prev.map((inc) => (inc.id === selectedIncidentId ? { ...inc, status: 'resolved' } : inc)));
         setDraftRcaReport(approvedMessage);
-        showToast(`⚡ Incident ${selectedIncidentId} approved! RCA report broadcasted to Slack.`, 'success');
+        showToast(`Incident ${selectedIncidentId} approved. RCA report broadcast to Slack.`, 'success');
       }
     } catch (err) {
       console.error('Failed to approve incident:', err);
@@ -413,6 +428,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     <AppContext.Provider
       value={{
         incidents,
+        totalIncidents,
+        activeIncidentsCount,
         selectedIncidentId,
         selectedIncident,
         filterSeverity,

@@ -23,22 +23,46 @@ export async function notify_node(
 ): Promise<Partial<typeof AgentStateSchema.State>> {
     const { incidentId } = state;
 
-    nodeLogger.info({ incidentId }, 'notify_node: posting approved RCA to #all-vigil');
+    nodeLogger.info({ incidentId }, 'notify_node: posting approved RCA to Slack');
 
-    const channel = process.env.SLACK_INCIDENTS_CHANNEL ?? 'C0000000000';
-
-    // ── 1. Post public Block Kit message ─────────────────────────────────────
+    const webhookUrl = state.orgConfig?.slackWebhookUrl || process.env.SLACK_WEBHOOK_URL;
     let broadcastTs: string | undefined;
-    try {
-        const result = await slack.chat.postMessage({
-            channel,
-            text: `⚡ Vigil — Incident #${shortId(incidentId)} RCA approved`,
-            blocks: buildChannelBlocks(state),
-        });
-        broadcastTs = result.ts ?? undefined;
-        nodeLogger.info({ incidentId, channel, ts: broadcastTs }, 'notify_node: channel message posted');
-    } catch (err) {
-        throw new AgentError('notify', 'Failed to post incident RCA to Slack channel', err);
+
+    // ── 1. Post to Slack (Webhook URL preferred, Bot Token fallback) ─────────
+    if (webhookUrl && webhookUrl.startsWith('https://hooks.slack.com/')) {
+        try {
+            const res = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: `[VIGIL] Incident #${shortId(incidentId)} RCA approved`,
+                    blocks: buildChannelBlocks(state),
+                }),
+            });
+            if (res.ok) {
+                broadcastTs = new Date().toISOString();
+                nodeLogger.info({ incidentId }, 'notify_node: broadcasted to Slack webhook');
+            } else {
+                nodeLogger.warn({ incidentId, status: res.status }, 'notify_node: Slack webhook returned non-200');
+            }
+        } catch (webhookErr) {
+            nodeLogger.warn({ incidentId, err: webhookErr }, 'notify_node: failed to post to Slack webhook');
+        }
+    }
+
+    if (!broadcastTs && process.env.SLACK_BOT_TOKEN) {
+        const channel = process.env.SLACK_INCIDENTS_CHANNEL ?? 'C0000000000';
+        try {
+            const result = await slack.chat.postMessage({
+                channel,
+                text: `[VIGIL] Incident #${shortId(incidentId)} RCA approved`,
+                blocks: buildChannelBlocks(state),
+            });
+            broadcastTs = result.ts ?? undefined;
+            nodeLogger.info({ incidentId, channel, ts: broadcastTs }, 'notify_node: channel message posted via bot token');
+        } catch (err) {
+            nodeLogger.warn({ incidentId, err }, 'notify_node: failed to post to Slack channel via bot token');
+        }
     }
 
     // ── 2. Persist approval + broadcast ts ───────────────────────────────────
@@ -54,7 +78,7 @@ export async function notify_node(
     } catch (err) {
         nodeLogger.error(
             { incidentId, err },
-            'notify_node: failed to persist APPROVED status — Slack message was sent'
+            'notify_node: failed to persist APPROVED status'
         );
     }
 
@@ -73,13 +97,6 @@ export async function notify_node(
 }
 
 // ─── Block Kit channel message builder — thin renderer ───────────────────────
-//
-// Identical to the DM blocks in human_review_node except:
-//   - No action buttons (public channel post — no engineer interaction needed)
-//   - Has an "Approved" context footer instead
-//
-// All Q1/Q2/Q3 content is LLM-authored (state.q1WhatBroke etc.) — zero
-// formatting logic lives here. The LLM already formatted for Slack mrkdwn.
 
 function buildChannelBlocks(state: typeof AgentStateSchema.State): KnownBlock[] {
     const { incidentId, q1WhatBroke, q2WhatCausedIt, q3DidWeCauseIt, fixSteps, runbookChunks } = state;
@@ -89,7 +106,7 @@ function buildChannelBlocks(state: typeof AgentStateSchema.State): KnownBlock[] 
         // ── Header ────────────────────────────────────────────────────────────
         {
             type: 'header',
-            text: { type: 'plain_text', text: `⚡ Vigil — Incident #${id}`, emoji: true },
+            text: { type: 'plain_text', text: `[VIGIL] Incident #${id}`, emoji: false },
         },
         { type: 'divider' },
 
@@ -137,7 +154,7 @@ function buildChannelBlocks(state: typeof AgentStateSchema.State): KnownBlock[] 
             elements: [
                 {
                     type: 'mrkdwn',
-                    text: `✅ *Approved* · ${new Date().toUTCString()} · \`${incidentId}\``,
+                    text: `[APPROVED] *Approved* · ${new Date().toUTCString()} · \`${incidentId}\``,
                 },
             ],
         },
@@ -166,5 +183,5 @@ function runbookHint(
     const title = (top.metadata?.title as string) ?? 'Runbook';
     const distance = top.metadata?.distance != null ? Number(top.metadata.distance) : null;
     const match = distance !== null ? ` (${Math.round((1 - distance) * 100)}% match)` : '';
-    return `📖 Runbook: _${title}${match}_`;
+    return `Runbook: _${title}${match}_`;
 }

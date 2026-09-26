@@ -81,7 +81,7 @@ export function parseRcaSummary(
 
     // Q3 fallback if empty
     if (!q3) {
-        q3 = `:white_check_mark: No deploy found within the 30-minute window`;
+        q3 = `[NO DEPLOY] No deploy found within the 30-minute window`;
     }
 
     // Format Q4 exclusively from real fixSteps array or extracted q4 string
@@ -98,7 +98,7 @@ export function parseRcaSummary(
     }
 
     // Draft mrkdwn (No hardcoded "Approved" footer pre-approval)
-    const formattedSlackMrkdwn = `⚡ Vigil — Incident #${shortId}\n\n` +
+    const formattedSlackMrkdwn = `[VIGIL] Incident #${shortId}\n\n` +
         `*Q1 — What broke?*\n${q1}\n\n` +
         `*Q2 — What caused it?*\n${q2}\n\n` +
         `*Q3 — Did we cause it?*\n${q3}\n\n` +

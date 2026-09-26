@@ -35,7 +35,7 @@ export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData: _summar
           Vigil SRE Copilot Ready
         </h3>
         <p className="text-xs text-secondary/80 max-w-sm mx-auto">
-          Your telemetry webhooks, Slack Bot credentials, service topology, and runbooks have been configured.
+          Your telemetry webhooks, Slack Webhook, service topology, and runbooks have been configured.
         </p>
       </div>
 
@@ -58,10 +58,10 @@ export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData: _summar
         <div className="flex items-center justify-between text-xs">
           <span className="flex items-center gap-2 text-white/90">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Slack App Bot Integration</span>
+            <span>Slack Webhook Notifications</span>
           </span>
           <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-            Authenticated
+            Ready
           </span>
         </div>
 

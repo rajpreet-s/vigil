@@ -26,12 +26,57 @@ export const handleAlertmanagerWebhook: RouteHandler<{ Body: AlertmanagerPayload
     const webhookService = new WebhookService(prisma, request.log);
     let processedCount = 0;
 
+    // Resolve target organization from params, query, headers, or bearer token
+    const paramsApiKey = (request.params as any)?.apiKey;
+    const queryApiKey = (request.query as any)?.api_key || (request.query as any)?.apiKey;
+    const headerApiKey = (request.headers['x-api-key'] as string | undefined);
+    const authHeader = request.headers.authorization;
+    const bearerApiKey = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader.slice(7).trim() : undefined;
+    const apiKey = paramsApiKey || queryApiKey || headerApiKey || bearerApiKey;
+
+    let targetOrgId = (request.query as any)?.org_id;
+    if (!targetOrgId && apiKey) {
+        const org = await prisma.organization.findUnique({ where: { api_key: String(apiKey) } });
+        if (org) {
+            targetOrgId = org.id;
+        } else {
+            request.log.warn(`[VIGIL INGEST] Webhook rejected: Invalid or unknown api_key "${apiKey}".`);
+            return reply.status(401).send({
+                success: false,
+                error: `Invalid API key "${apiKey}". Ensure the webhook URL includes a valid organization api_key.`,
+            });
+        }
+    }
+
+    if (!targetOrgId) {
+        const isProduction = process.env.NODE_ENV === 'production' && process.env.ENABLE_DEV_LOGIN !== 'true';
+        if (isProduction) {
+            return reply.status(401).send({
+                success: false,
+                error: 'Unauthorized: Missing organization api_key. Add ?api_key=<your_org_api_key> to the Alertmanager webhook URL.',
+            });
+        }
+
+        // Local development fallback
+        const fallbackOrg = (await prisma.organization.findFirst({
+            where: { slug: 'vigil-demo' },
+        })) || (await prisma.organization.findFirst({
+            orderBy: { created_at: 'asc' },
+        }));
+        if (fallbackOrg) {
+            targetOrgId = fallbackOrg.id;
+            request.log.info(
+                `[VIGIL INGEST] Webhook received without api_key. Defaulting to local organization "${fallbackOrg.name}" (${fallbackOrg.id}). To route to a specific account, add ?api_key=<org_api_key> to the Alertmanager webhook URL.`
+            );
+        }
+    }
+
     for (const alert of firingAlerts) {
         const serviceName = alert.labels.service;
         const alertName = alert.labels.alertname;
         
         try {
-            await webhookService.processAlert(alert);
+            await webhookService.processAlert(alert, targetOrgId);
             processedCount++;
         } catch (err) {
             request.log.error(

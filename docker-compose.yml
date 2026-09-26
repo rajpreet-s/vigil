@@ -57,10 +57,7 @@ services:
             - GEMINI_API_KEY=${GEMINI_API_KEY}
             # Prometheus runs on the Mac host — host.docker.internal resolves to the host from inside Docker
             - PROMETHEUS_QUERY_URL=http://host.docker.internal:9090/api/v1/query
-            - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
-            - SLACK_ONCALL_USER_ID=${SLACK_ONCALL_USER_ID}
-            - SLACK_INCIDENTS_CHANNEL=${SLACK_INCIDENTS_CHANNEL}
-            - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
+            - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
         ports:
             - '3001:3001'
         depends_on:
@@ -87,6 +84,7 @@ services:
             - DATABASE_URL=postgresql://docker:admin@db:5432/vigil
             - AGENT_URL=http://agent:3001
             - NODE_ENV=production
+            - ENABLE_DEV_LOGIN=true
             - PORT=8080
             - JWT_SECRET=${JWT_SECRET}
             - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
@@ -94,6 +92,8 @@ services:
             - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
             - FRONTEND_URL=http://localhost:3000
             - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+            - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+            - INCIDENT_SETTLE_DELAY_MS=${INCIDENT_SETTLE_DELAY_MS:-15000}
         ports:
             - '8080:8080'
         depends_on:

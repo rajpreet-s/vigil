@@ -125,4 +125,15 @@ export const AgentStateSchema = Annotation.Root({
         reducer: (_left, right) => right,
         default: () => null,
     }),
+
+    // ─── Organization Configuration ────────────────────────────────────────────
+    // Company-level settings (Gemini API key, model, Slack webhook) fetched from DB
+    orgConfig: Annotation<{
+        geminiApiKey?: string | null;
+        geminiModel?: string | null;
+        slackWebhookUrl?: string | null;
+    } | null>({
+        reducer: (_left, right) => right,
+        default: () => null,
+    }),
 });

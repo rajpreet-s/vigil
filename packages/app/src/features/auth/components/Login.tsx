@@ -5,6 +5,13 @@ import VigilLogo from '../../../components/ui/VigilLogo';
 export const Login: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
 
+    const isExplicitlyDisabled = import.meta.env.VITE_ENABLE_DEV_LOGIN === 'false';
+    const isLocalDev =
+        !isExplicitlyDisabled &&
+        (import.meta.env.DEV ||
+            ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(window.location.hostname) ||
+            window.location.hostname.endsWith('.local'));
+
     const handleGoogleLogin = () => {
         setIsLoading(true);
         window.location.href = '/api/auth/google';
@@ -19,10 +26,11 @@ export const Login: React.FC = () => {
                 body: JSON.stringify({}),
             });
             if (res.ok) {
-                const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                const isLocalhost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
                 window.location.href = isLocalhost ? '/' : '/app';
             } else {
-                alert('Local dev login failed. Ensure Vigil API is running.');
+                const data = await res.json().catch(() => ({}));
+                alert(data.error || 'Local dev login failed. Ensure Vigil API is running.');
             }
         } catch (err) {
             console.error('Dev login error:', err);
@@ -158,23 +166,26 @@ export const Login: React.FC = () => {
                             )}
                         </button>
                         
-                        {/* Divider */}
-                        <div className="flex items-center gap-3 my-4 w-full">
-                            <div className="h-px bg-surface-container-high flex-1" />
-                            <span className="text-[11px] font-mono text-secondary/60 uppercase tracking-wider">or</span>
-                            <div className="h-px bg-surface-container-high flex-1" />
-                        </div>
+                        {/* Divider & Local One-Click Dev Sign In (Only in local development) */}
+                        {isLocalDev && (
+                            <>
+                                <div className="flex items-center gap-3 my-4 w-full">
+                                    <div className="h-px bg-surface-container-high flex-1" />
+                                    <span className="text-[11px] font-mono text-secondary/60 uppercase tracking-wider">or</span>
+                                    <div className="h-px bg-surface-container-high flex-1" />
+                                </div>
 
-                        {/* Local One-Click Dev Sign In */}
-                        <button
-                            type="button"
-                            onClick={handleDevLogin}
-                            disabled={isLoading}
-                            className="w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/30 active:scale-[0.99] text-xs font-bold text-primary transition-all shadow-md group"
-                        >
-                            <Terminal className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
-                            <span>Quick Sign In (Local Dev / Demo)</span>
-                        </button>
+                                <button
+                                    type="button"
+                                    onClick={handleDevLogin}
+                                    disabled={isLoading}
+                                    className="w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/30 active:scale-[0.99] text-xs font-bold text-primary transition-all shadow-md group"
+                                >
+                                    <Terminal className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                                    <span>Quick Sign In (Local Dev / Demo)</span>
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

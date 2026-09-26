@@ -54,6 +54,7 @@ const incidentsRoutes: FastifyPluginAsync = async (fastify) => {
                             nextCursor: { type: 'string', nullable: true },
                             hasMore: { type: 'boolean' },
                             total: { type: 'number' },
+                            activeTotal: { type: 'number' },
                         },
                     },
                     401: {
@@ -135,6 +136,13 @@ const incidentsRoutes: FastifyPluginAsync = async (fastify) => {
                     where: orgId ? { org_id: orgId } : {},
                 });
 
+                const activeCount = await fastify.prisma.incident.count({
+                    where: {
+                        ...(orgId ? { org_id: orgId } : {}),
+                        status: { in: ['OPEN', 'PENDING_REVIEW', 'PROCESSING'] },
+                    },
+                });
+
                 const hasMore = incidents.length > limit;
                 const items = hasMore ? incidents.slice(0, limit) : incidents;
 
@@ -169,6 +177,7 @@ const incidentsRoutes: FastifyPluginAsync = async (fastify) => {
                     nextCursor,
                     hasMore,
                     total: totalCount,
+                    activeTotal: activeCount,
                 });
             } catch (err) {
                 fastify.log.error(err, 'Failed to fetch incidents list');
@@ -332,19 +341,43 @@ const incidentsRoutes: FastifyPluginAsync = async (fastify) => {
                             updateData.resolved_at = new Date();
                         }
                         if (upperStatus === 'APPROVED') {
-                            const botToken = process.env.SLACK_BOT_TOKEN;
-                            const targetChannel = process.env.SLACK_INCIDENTS_CHANNEL || process.env.SLACK_ONCALL_USER_ID;
-                            if (botToken && targetChannel) {
+                            let webhookUrl = process.env.SLACK_WEBHOOK_URL;
+                            if (existing.org_id) {
+                                const org = await fastify.prisma.organization.findUnique({
+                                    where: { id: existing.org_id },
+                                });
+                                if (org?.slack_webhook_url) {
+                                    webhookUrl = org.slack_webhook_url;
+                                }
+                            }
+                            const reportContent = rca_summary || existing.rca_summary || 'Incident marked resolved by operator.';
+                            const messageText = `[VIGIL INCIDENT RCA REPORT DISPATCHED]\nIncident ID: ${id} | Status: RESOLVED\n\n${reportContent}`;
+
+                            if (webhookUrl && webhookUrl.startsWith('https://hooks.slack.com/')) {
                                 try {
-                                    const client = new WebClient(botToken);
-                                    const reportContent = rca_summary || existing.rca_summary || 'Incident marked resolved by operator.';
-                                    await client.chat.postMessage({
-                                        channel: targetChannel,
-                                        text: `🚨 *VIGIL INCIDENT RCA REPORT DISPATCHED*\n*Incident ID:* \`${id}\` | *Status:* RESOLVED\n\n${reportContent}`,
+                                    await fetch(webhookUrl, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ text: messageText }),
                                     });
                                     updateData.notification_sent = true;
                                 } catch (slackErr) {
-                                    fastify.log.error(slackErr, `Failed to dispatch Slack message for incident ${id}`);
+                                    fastify.log.error(slackErr, `Failed to dispatch Slack webhook for incident ${id}`);
+                                }
+                            } else {
+                                const botToken = process.env.SLACK_BOT_TOKEN;
+                                const targetChannel = process.env.SLACK_INCIDENTS_CHANNEL || process.env.SLACK_ONCALL_USER_ID;
+                                if (botToken && targetChannel) {
+                                    try {
+                                        const client = new WebClient(botToken);
+                                        await client.chat.postMessage({
+                                            channel: targetChannel,
+                                            text: messageText,
+                                        });
+                                        updateData.notification_sent = true;
+                                    } catch (slackErr) {
+                                        fastify.log.error(slackErr, `Failed to dispatch Slack message for incident ${id}`);
+                                    }
                                 }
                             }
                         }

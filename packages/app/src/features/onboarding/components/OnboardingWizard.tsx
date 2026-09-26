@@ -123,6 +123,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
   };
 
   const isCompleted = localStorage.getItem('vigil_onboarding_completed') === 'true' || currentStep === 5;
+  const isOwner = status?.isOwner ?? (activeOrg?.role ? activeOrg.role === 'OWNER' : true);
+  const currentRole = status?.orgRole || activeOrg?.role || (isOwner ? 'OWNER' : 'MEMBER');
 
   const steps = [
     { num: 1, label: 'Gemini AI Engine', short: 'Gemini', desc: 'Reasoning model & live API key' },
@@ -134,6 +136,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
 
   const canNavigateTo = (stepNum: number) => {
     if (stepNum === currentStep) return true;
+    if (!isOwner) return true; // non-owners can inspect all steps in read-only mode
     if (completedSteps.includes(stepNum)) return true;
     // Step 1 is always accessible
     if (stepNum === 1) return true;
@@ -158,6 +161,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
                 <span className="text-emerald-400 font-mono flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   API Active
+                </span>
+                <span className="text-slate-600">•</span>
+                <span className={`font-mono px-2 py-0.5 rounded text-[10px] font-semibold ${
+                  isOwner ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                }`}>
+                  {isOwner ? 'Role: Owner (Full Access)' : `Role: ${currentRole} (Read-Only)`}
                 </span>
               </p>
             </div>
@@ -353,10 +362,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
           {/* Right Column (8 cols desktop / 12 cols mobile): Interactive Step Card */}
           <div className="w-full lg:col-span-8">
             <div className="bg-[#111318]/90 backdrop-blur-2xl border border-surface-container-high/60 rounded-2xl p-4 sm:p-6 lg:p-7 shadow-2xl relative">
-              {currentStep === 1 && <StepWorkspace onNext={handleNextStep} />}
+              {currentStep === 1 && <StepWorkspace onNext={handleNextStep} status={status} isOwner={isOwner} />}
               {currentStep === 2 && <StepPrometheus onNext={handleNextStep} onBack={handlePrevStep} />}
-              {currentStep === 3 && <StepSlack onNext={handleNextStep} onBack={handlePrevStep} />}
-              {currentStep === 4 && <StepKnowledge onNext={handleNextStep} onBack={handlePrevStep} />}
+              {currentStep === 3 && <StepSlack onNext={handleNextStep} onBack={handlePrevStep} status={status} isOwner={isOwner} />}
+              {currentStep === 4 && <StepKnowledge onNext={handleNextStep} onBack={handlePrevStep} isOwner={isOwner} />}
               {currentStep === 5 && (
                 <StepComplete summaryData={wizardData} onFinish={handleFinishOnboarding} />
               )}

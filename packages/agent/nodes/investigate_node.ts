@@ -141,7 +141,12 @@ Do NOT include the format tags in your tool calls. Only write the findings block
         iterations++;
         nodeLogger.info({ iteration: iterations }, 'investigate_node: LLM iteration');
 
-        const response = (await invokeLlmWithRetryAndFallback(messages, { tools, temperature: 0 })) as AIMessage;
+        const response = (await invokeLlmWithRetryAndFallback(messages, {
+            tools,
+            temperature: 0,
+            apiKey: state.orgConfig?.geminiApiKey || undefined,
+            model: state.orgConfig?.geminiModel || undefined,
+        })) as AIMessage;
         messages.push(response);
 
         // ── Check if LLM wants to call tools ─────────────────────────────────

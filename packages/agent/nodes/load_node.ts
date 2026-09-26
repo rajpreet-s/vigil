@@ -30,6 +30,42 @@ export async function load_node(
     const incidentId = state.incidentId;
     nodeLogger.info({ incidentId }, 'load_node: starting data fetch');
 
+    // ── 0. Fetch incident & organization config ──────────────────────────────
+    let orgConfig: { geminiApiKey?: string | null; geminiModel?: string | null; slackWebhookUrl?: string | null } | null = null;
+    let incidentOrgId: string | null = null;
+    try {
+        const incident = await prisma.incident.findUnique({
+            where: { id: incidentId },
+            include: { org: true },
+        });
+        if (incident?.org) {
+            incidentOrgId = incident.org.id;
+            orgConfig = {
+                geminiApiKey: incident.org.gemini_api_key,
+                geminiModel: incident.org.gemini_model,
+                slackWebhookUrl: incident.org.slack_webhook_url,
+            };
+        } else {
+            // Fallback to first organization in DB
+            const firstOrg = await prisma.organization.findFirst({
+                orderBy: { created_at: 'asc' },
+            });
+            if (firstOrg) {
+                incidentOrgId = firstOrg.id;
+                orgConfig = {
+                    geminiApiKey: firstOrg.gemini_api_key,
+                    geminiModel: firstOrg.gemini_model,
+                    slackWebhookUrl: firstOrg.slack_webhook_url,
+                };
+            }
+        }
+    } catch (err) {
+        nodeLogger.warn(
+            { err: err instanceof Error ? err.message : String(err) },
+            'load_node: failed to fetch org config'
+        );
+    }
+
     // ── 1. Fetch anomalies (SELECT FOR UPDATE SKIP LOCKED) ───────────────────
     // Raw SQL is used here because Prisma does not expose SKIP LOCKED through
     // its high-level API. The result is cast to the Prisma Anomaly shape.
@@ -53,7 +89,7 @@ export async function load_node(
     // null-check state.topology. RCA still runs, just without graph traversal.
     let topology: TopologyGraph | null = null;
     try {
-        topology = await getTopologyGraph();
+        topology = await getTopologyGraph(incidentOrgId);
     } catch (err) {
         nodeLogger.warn(
             { err: err instanceof Error ? err.message : String(err) },
@@ -94,6 +130,7 @@ export async function load_node(
         rawAnomalies,
         topology,
         recentDeployments,
+        orgConfig,
     };
 }
 
@@ -110,8 +147,9 @@ export async function load_node(
 // After building the forward graph (dependsOn) we do a second pass to compute
 // the reverse graph (dependents), mirroring exactly what the YAML parser does.
 
-async function getTopologyGraph(): Promise<TopologyGraph> {
-    const rows: Topology[] = await prisma.topology.findMany();
+async function getTopologyGraph(orgId?: string | null): Promise<TopologyGraph> {
+    const where = orgId ? { OR: [{ org_id: orgId }, { org_id: null }] } : {};
+    const rows: Topology[] = await prisma.topology.findMany({ where });
 
     nodeLogger.info({ count: rows.length }, 'load_node: topology rows fetched');
 
