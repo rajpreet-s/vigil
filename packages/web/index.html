@@ -1,20 +1,40 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vigil — Alert storms, correlated.</title>
+    <title>Vigil — Agentic SRE Incident Command & Alert Storm Collapse</title>
     <meta
       name="description"
-      content="Vigil groups Prometheus alert storms into a single incident with a causal timeline, delivered as one Slack message. Open-source, self-hosted, MIT licensed."
+      content="Vigil correlates alert storms into atomic incidents with BFS topology blast radius, ChromaDB vector runbook RAG, and Gemini 3.8 Flash causal synthesis. Delivered to Slack & SRE Command Console."
     />
-    <meta property="og:title" content="Vigil — Alert storms, correlated." />
+    <meta property="og:title" content="Vigil — Agentic SRE Incident Command" />
     <meta
       property="og:description"
-      content="Topology-aware alert correlation for Prometheus & Alertmanager. One outage, one Slack message."
+      content="40:1 alert collapse, topology-aware root-cause discovery, and instant runbook retrieval for high-availability engineering teams."
     />
     <meta property="og:type" content="website" />
+    <script>
+      (function() {
+        try {
+          var params = new URLSearchParams(window.location.search);
+          var urlTheme = params.get('theme');
+          var theme = urlTheme || localStorage.getItem('theme');
+          if (!theme) {
+            var m = document.cookie.match(/(?:^|; )theme=([^;]*)/);
+            if (m) theme = m[1];
+          }
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.setAttribute('data-theme', 'light');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

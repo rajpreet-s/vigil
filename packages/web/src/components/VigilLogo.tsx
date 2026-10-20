@@ -12,7 +12,7 @@ interface VigilLogoProps {
  */
 export default function VigilLogo({
     height = 22,
-    color = '#E8EAED',
+    color = 'currentColor',
     className = '',
 }: VigilLogoProps) {
     // Jost at 600 weight, uppercase, 0.15em tracking
