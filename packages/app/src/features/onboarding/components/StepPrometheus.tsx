@@ -113,7 +113,7 @@ receivers:
             <Flame className="w-3.5 h-3.5" />
             <span>Step 2 of 4 • Telemetry & Ingestion (Required)</span>
           </div>
-          <h3 className="text-xl font-bold text-white font-display tracking-tight">
+          <h3 className="text-xl font-bold text-on-surface font-display tracking-tight">
             Prometheus & Alertmanager Webhook
           </h3>
           <p className="text-xs text-secondary/80 mt-0.5">
@@ -123,7 +123,7 @@ receivers:
 
         {/* Webhook URL Card */}
         <div className="p-4 rounded-xl bg-surface-container-low/60 border border-surface-container-high/60 space-y-2">
-          <div className="flex items-center justify-between text-xs font-semibold text-white">
+          <div className="flex items-center justify-between text-xs font-semibold text-on-surface">
             <span>Webhook Receiver Endpoint</span>
             <span className="font-mono text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
               HTTP POST Receiver
@@ -134,12 +134,12 @@ receivers:
               type="text"
               readOnly
               value={webhookEndpoint}
-              className="w-full bg-[#0c0e13] border border-surface-container-high rounded-lg px-3.5 py-2 text-xs font-mono text-primary focus:outline-none select-all"
+              className="w-full bg-surface-container-lowest border border-surface-container-high rounded-lg px-3.5 py-2 text-xs font-mono text-primary focus:outline-none select-all"
             />
             <button
               type="button"
               onClick={handleCopyUrl}
-              className="px-3.5 py-2 bg-surface-container-high hover:bg-surface-container-highest text-xs font-semibold text-white rounded-lg border border-surface-container-highest transition-all flex items-center gap-1.5 whitespace-nowrap"
+              className="px-3.5 py-2 bg-surface-container-high hover:bg-surface-container-highest text-xs font-semibold text-on-surface rounded-lg border border-surface-container-highest transition-all flex items-center gap-1.5 whitespace-nowrap"
             >
               {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copiedUrl ? 'Copied' : 'Copy URL'}</span>
@@ -148,7 +148,7 @@ receivers:
           <div className="flex items-center gap-1.5 text-[11px] text-secondary/70 pt-1">
             <Shield className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
             <span>
-              Scoped to <strong className="text-white">{activeOrg?.name || 'Your Organization'}</strong>. Alerts sent with this API key are routed directly and exclusively to this account.
+              Scoped to <strong className="text-on-surface">{activeOrg?.name || 'Your Organization'}</strong>. Alerts sent with this API key are routed directly and exclusively to this account.
             </span>
           </div>
         </div>
@@ -156,7 +156,7 @@ receivers:
         {/* Test Webhook Action (Primary Step Gating) */}
         <div className="p-4 rounded-xl bg-gradient-to-r from-orange-500/10 via-surface-container-low/60 to-surface-container-low/60 border border-orange-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <div className="text-xs font-bold text-on-surface flex items-center gap-1.5">
               <span>Verify Pipeline Ingestion</span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-orange-500/20 text-orange-300">1-Click Test</span>
             </div>
@@ -211,11 +211,11 @@ receivers:
         )}
 
         {/* Collapsible Alertmanager YAML snippet */}
-        <div className="border border-surface-container-high rounded-xl overflow-hidden bg-[#0c0e13]">
+        <div className="border border-surface-container-high rounded-xl overflow-hidden bg-surface-container">
           <button
             type="button"
             onClick={() => setShowYaml(!showYaml)}
-            className="w-full p-3 flex items-center justify-between text-xs font-semibold text-secondary hover:text-white transition-colors"
+            className="w-full p-3 flex items-center justify-between text-xs font-semibold text-secondary hover:text-on-surface transition-colors"
           >
             <span className="flex items-center gap-2">
               <Code className="w-3.5 h-3.5 text-primary" />
@@ -225,7 +225,7 @@ receivers:
           </button>
 
           {showYaml && (
-            <div className="p-3 border-t border-surface-container-high bg-black/40 space-y-2">
+            <div className="p-3 border-t border-surface-container-high bg-surface-container-lowest/50 space-y-2">
               <div className="flex justify-end">
                 <button
                   type="button"
@@ -236,7 +236,7 @@ receivers:
                   <span>{copiedYaml ? 'YAML Copied!' : 'Copy YAML'}</span>
                 </button>
               </div>
-              <pre className="bg-[#0c0e13] border border-surface-container-high rounded-lg p-3 text-[11px] font-mono text-slate-300 overflow-x-auto leading-relaxed max-h-48">
+              <pre className="bg-surface-container-lowest border border-surface-container-high rounded-lg p-3 text-[11px] font-mono text-on-surface overflow-x-auto leading-relaxed max-h-48">
                 {alertmanagerYaml}
               </pre>
             </div>
@@ -249,14 +249,14 @@ receivers:
             type="checkbox"
             checked={alertConfigured}
             onChange={(e) => setAlertConfigured(e.target.checked)}
-            className="rounded border-surface-container-highest bg-[#0c0e13] text-primary focus:ring-primary w-4 h-4"
+            className="rounded border-surface-container-highest bg-surface-container-lowest text-primary focus:ring-primary w-4 h-4"
           />
           <span>I have configured Alertmanager in my cluster or verified the webhook endpoint.</span>
         </label>
       </div>
 
       {/* Sticky Bottom Navigation Footer */}
-      <div className="sticky bottom-0 bg-[#111318]/95 backdrop-blur-md pt-4 pb-1 border-t border-surface-container-high/60 z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="sticky bottom-0 bg-surface-container/95 backdrop-blur-md pt-4 pb-1 border-t border-surface-container-high/60 z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
         <button
           type="button"
           onClick={onBack}

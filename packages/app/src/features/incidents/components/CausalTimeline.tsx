@@ -8,8 +8,8 @@ export const CausalTimeline: React.FC = () => {
     if (!selectedIncident) return null;
 
     return (
-        <div className="bg-[#111318]/90 border border-surface-container-high/60 rounded-2xl p-5 shadow-xl space-y-4">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2 font-mono border-b border-surface-container-high/40 pb-2.5">
+        <div className="bg-surface-container/90 border border-surface-container-high/60 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+            <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-2 font-mono border-b border-surface-container-high/40 pb-2.5">
                 <Clock className="w-4 h-4 text-primary" />
                 <span>Cascade Sequence & Telemetry Timeline</span>
             </h4>
@@ -30,13 +30,13 @@ export const CausalTimeline: React.FC = () => {
                         );
                     } else if (item.status === 'success') {
                         badgeEl = (
-                            <span className="inline-block bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold font-mono mr-2">
+                            <span className="inline-block bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold font-mono mr-2">
                                 OK
                             </span>
                         );
                     } else {
                         badgeEl = (
-                            <span className="inline-block bg-blue-500/15 text-blue-400 border border-blue-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold font-mono mr-2">
+                            <span className="inline-block bg-blue-500/15 text-blue-500 border border-blue-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold font-mono mr-2">
                                 INF
                             </span>
                         );
@@ -53,15 +53,15 @@ export const CausalTimeline: React.FC = () => {
                                         : item.status === 'warning'
                                           ? 'border-status-warning bg-status-warning/30'
                                           : item.status === 'success'
-                                            ? 'border-emerald-400 bg-emerald-400/30'
-                                            : 'border-blue-400 bg-blue-400/30'
+                                            ? 'border-emerald-500 bg-emerald-500/30'
+                                            : 'border-blue-500 bg-blue-500/30'
                                 }`}
                             />
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-mono text-secondary/70 font-semibold">
+                                <span className="text-[10px] font-mono text-secondary font-semibold">
                                     {item.time}
                                 </span>
-                                <p className="text-white/95 font-sans font-medium flex items-center mt-0.5 leading-snug">
+                                <p className="text-on-surface font-sans font-medium flex items-center mt-0.5 leading-snug">
                                     {badgeEl}
                                     <span>{cleanEvent}</span>
                                 </p>

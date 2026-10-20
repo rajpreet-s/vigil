@@ -12,19 +12,21 @@ export const RunbookSearch: React.FC = () => {
   } = useApp();
 
   return (
-    <div className="flex-1 p-8 overflow-y-auto space-y-6 max-w-5xl">
+    <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto space-y-6 max-w-5xl">
       <div className="border-b border-surface-container-high/40 pb-4">
-        <h3 className="text-xl font-bold font-display text-white mb-2">ChromaDB Runbook Knowledge Base</h3>
+        <h3 className="text-xl font-bold font-display text-on-surface mb-2">ChromaDB Runbook Knowledge Base</h3>
         <p className="text-sm text-secondary">
           Search vectorized system runbooks matching active incident context keys to feed LLM analysis prompts.
         </p>
       </div>
 
       {/* Semantic search box */}
-      <div className="bg-surface-container-low/40 border border-surface-container-high/60 rounded-xl p-6">
+      <div className="bg-surface-container-low border border-surface-container-high/60 rounded-xl p-4 sm:p-6 shadow-sm">
         <form onSubmit={handleKbSearch} className="space-y-4">
-          <label htmlFor="kb-query" className="text-xs font-bold text-white uppercase tracking-wider block">ChromaDB Semantic Query Playground</label>
-          <div className="flex gap-3">
+          <label htmlFor="kb-query" className="text-xs font-bold text-on-surface uppercase tracking-wider block">
+            ChromaDB Semantic Query Playground
+          </label>
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-2.5 w-4 h-4 text-secondary" />
               <input
@@ -33,13 +35,13 @@ export const RunbookSearch: React.FC = () => {
                 placeholder="Search corpus (e.g. 'connection pool', 'replica lag', 'garbage collector')..."
                 value={kbQuery}
                 onChange={(e) => setKbQuery(e.target.value)}
-                className="w-full bg-surface-container-lowest border border-outline-variant/60 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline focus:outline-2 focus:outline-primary transition-all"
+                className="w-full bg-surface-container-lowest border border-outline-variant/60 rounded-lg pl-10 pr-4 py-2 text-sm text-on-surface placeholder:text-secondary/60 focus:outline focus:outline-2 focus:outline-primary transition-all"
               />
             </div>
             <button
               type="submit"
               disabled={isSearchingKb}
-              className="bg-primary hover:brightness-110 text-on-primary font-semibold text-xs px-5 py-2.5 rounded-lg transition-all shadow"
+              className="bg-primary hover:brightness-110 text-on-primary font-semibold text-xs px-5 py-2.5 rounded-lg transition-all shadow flex items-center justify-center shrink-0 disabled:opacity-50"
             >
               {isSearchingKb ? 'Searching...' : 'Vector Search'}
             </button>
@@ -52,13 +54,13 @@ export const RunbookSearch: React.FC = () => {
             <span className="text-[10px] text-secondary font-mono uppercase block">Semantic Similarity Matches</span>
             <div className="space-y-3">
               {kbResults.map((res, i) => (
-                <div key={i} className="bg-surface-container-lowest/60 border border-surface-container-high p-4 rounded-lg flex flex-col md:flex-row justify-between gap-3">
+                <div key={i} className="bg-surface-container border border-surface-container-high/60 p-4 rounded-lg flex flex-col md:flex-row justify-between gap-3 shadow-sm">
                   <div>
                     <span className="text-[10px] font-mono text-primary font-bold">{res.file}</span>
-                    <p className="text-xs text-white mt-1 leading-relaxed">{res.doc}</p>
+                    <p className="text-xs text-on-surface mt-1 leading-relaxed">{res.doc}</p>
                   </div>
-                  <div className="flex-shrink-0 text-right">
-                    <span className="text-[10px] bg-status-healthy/10 text-status-healthy border border-status-healthy/25 px-2 py-0.5 rounded font-mono font-bold">
+                  <div className="flex-shrink-0 sm:text-right">
+                    <span className="text-[10px] bg-status-healthy/10 text-status-healthy border border-status-healthy/25 px-2 py-0.5 rounded font-mono font-bold inline-block">
                       Distance Score: {res.score}
                     </span>
                   </div>
@@ -71,4 +73,5 @@ export const RunbookSearch: React.FC = () => {
     </div>
   );
 };
+
 export default RunbookSearch;

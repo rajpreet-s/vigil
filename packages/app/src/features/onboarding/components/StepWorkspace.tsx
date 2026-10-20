@@ -135,7 +135,7 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
                         <Sparkles className="w-3.5 h-3.5" />
                         <span>Step 1 of 4 • AI Reasoning Engine (Required)</span>
                     </div>
-                    <h3 className="text-xl font-bold text-white font-display tracking-tight">
+                    <h3 className="text-xl font-bold text-on-surface font-display tracking-tight">
                         Connect Google Gemini Engine
                     </h3>
                     <p className="text-xs text-secondary/80 mt-0.5">
@@ -156,7 +156,7 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
 
                 {/* Model Selection Card */}
                 <div className="space-y-3">
-                    <label className="block text-xs font-semibold text-white/90">
+                    <label className="block text-xs font-semibold text-on-surface">
                         Select Gemini Reasoning Model
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -167,12 +167,12 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
                             className={`p-4 rounded-xl border text-left transition-all relative ${!isOwner ? 'opacity-80 cursor-default' : ''} ${
                                 geminiModel === 'gemini-3.8-flash'
                                     ? 'bg-primary/10 border-primary shadow-sm shadow-primary/10'
-                                    : 'bg-[#0c0e13] border-surface-container-high hover:border-surface-container-highest text-secondary'
+                                    : 'bg-surface-container border-surface-container-high hover:border-surface-container-highest text-secondary'
                             }`}
                         >
                             <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-xs font-bold font-mono text-white">
-                                    Gemini 3.6 Flash
+                                <span className="text-xs font-bold font-mono text-on-surface">
+                                    Gemini 3.8 Flash
                                 </span>
                                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                     Recommended
@@ -191,11 +191,11 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
                             className={`p-4 rounded-xl border text-left transition-all ${!isOwner ? 'opacity-80 cursor-default' : ''} ${
                                 geminiModel === 'gemini-3.5-flash'
                                     ? 'bg-primary/10 border-primary shadow-sm shadow-primary/10'
-                                    : 'bg-[#0c0e13] border-surface-container-high hover:border-surface-container-highest text-secondary'
+                                    : 'bg-surface-container border-surface-container-high hover:border-surface-container-highest text-secondary'
                             }`}
                         >
                             <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-xs font-bold font-mono text-white">
+                                <span className="text-xs font-bold font-mono text-on-surface">
                                     Gemini 3.5 Flash
                                 </span>
                                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
@@ -213,7 +213,7 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
                 {/* API Key Input Section */}
                 <div className="p-4 rounded-xl bg-surface-container-low/60 border border-surface-container-high/60 space-y-3.5">
                     <div className="flex items-center justify-between">
-                        <label className="text-xs font-semibold text-white/90 flex items-center gap-1.5">
+                        <label className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
                             <Key className="w-3.5 h-3.5 text-primary" />
                             <span>
                                 Google AI Studio API Key <span className="text-rose-400">*</span>
@@ -254,7 +254,7 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
                                 disabled
                                 readOnly
                                 placeholder="Configured by Organization Owner (Hidden for security)"
-                                className="w-full bg-[#0c0e13] border border-surface-container-high rounded-lg px-3.5 py-2.5 text-xs text-secondary/60 font-mono opacity-60 cursor-not-allowed select-none"
+                                className="w-full bg-surface-container-lowest border border-surface-container-high rounded-lg px-3.5 py-2.5 text-xs text-secondary/60 font-mono opacity-60 cursor-not-allowed select-none"
                             />
                         ) : (
                             <div className="relative flex items-center">
@@ -270,13 +270,13 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
                                             ? 'Using cluster environment key (or paste a new key to override)'
                                             : 'AIzaSy... (Paste Google AI Studio API Key here)'
                                     }
-                                    className="w-full bg-[#0c0e13] border border-surface-container-high rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-primary transition-all"
+                                    className="w-full bg-surface-container-lowest border border-surface-container-high rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-on-surface font-mono focus:outline-none focus:border-primary transition-all"
                                 />
                                 {geminiApiKey && (
                                     <button
                                         type="button"
                                         onClick={() => setShowApiKey(!showApiKey)}
-                                        className="absolute right-3 text-secondary/60 hover:text-white transition-colors p-1"
+                                        className="absolute right-3 text-secondary/60 hover:text-on-surface transition-colors p-1"
                                         title={showApiKey ? 'Hide API Key' : 'Show API Key'}
                                     >
                                         {showApiKey ? (
@@ -325,7 +325,7 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
                             {validationResult?.latencyMs && (
                                 <span className="text-[11px] font-mono text-secondary/70">
                                     Latency:{' '}
-                                    <strong className="text-white">
+                                    <strong className="text-on-surface">
                                         {validationResult.latencyMs}ms
                                     </strong>
                                 </span>

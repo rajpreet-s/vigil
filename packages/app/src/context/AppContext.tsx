@@ -58,6 +58,14 @@ interface AppContextType {
   createOrg: (name: string, slug?: string) => Promise<boolean>;
   joinOrg: (inviteCode: string) => Promise<boolean>;
   
+  // Theme & Navigation
+  theme: 'dark' | 'light';
+  setTheme: (t: 'dark' | 'light') => void;
+  toggleTheme: () => void;
+  isMobileDrawerOpen: boolean;
+  setIsMobileDrawerOpen: (open: boolean) => void;
+  toggleMobileDrawer: () => void;
+
   // Actions
   setFilterSeverity: (val: 'all' | 'critical' | 'warning') => void;
   setSelectedIncidentId: (id: string) => void;
@@ -80,6 +88,51 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Theme state synced with URL params, localStorage, cookies & document attributes
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlTheme = params.get('theme');
+      if (urlTheme === 'dark' || urlTheme === 'light') {
+        localStorage.setItem('theme', urlTheme);
+        document.cookie = `theme=${urlTheme}; path=/; max-age=31536000; SameSite=Lax`;
+        return urlTheme;
+      }
+      const saved = localStorage.getItem('theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      const m = document.cookie.match(/(?:^|; )theme=([^;]*)/);
+      if (m && (m[1] === 'dark' || m[1] === 'light')) return m[1] as 'dark' | 'light';
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        return 'light';
+      }
+    }
+    return 'light';
+  });
+
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  React.useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      root.setAttribute('data-theme', 'dark');
+      localStorage.setItem('theme', 'dark');
+      document.cookie = 'theme=dark; path=/; max-age=31536000; SameSite=Lax';
+    } else {
+      root.classList.remove('dark');
+      root.setAttribute('data-theme', 'light');
+      localStorage.setItem('theme', 'light');
+      document.cookie = 'theme=light; path=/; max-age=31536000; SameSite=Lax';
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  const toggleMobileDrawer = () => {
+    setIsMobileDrawerOpen((prev) => !prev);
+  };
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [totalIncidents, setTotalIncidents] = useState<number>(0);
   const [activeIncidentsCount, setActiveIncidentsCount] = useState<number>(0);
@@ -427,6 +480,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   return (
     <AppContext.Provider
       value={{
+        theme,
+        setTheme,
+        toggleTheme,
+        isMobileDrawerOpen,
+        setIsMobileDrawerOpen,
+        toggleMobileDrawer,
         incidents,
         totalIncidents,
         activeIncidentsCount,

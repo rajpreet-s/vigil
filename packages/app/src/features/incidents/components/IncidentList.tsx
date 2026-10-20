@@ -8,9 +8,16 @@ import { parseRcaSummary } from '../utils/formatIncident';
 interface IncidentListProps {
     isMini?: boolean;
     onExpandList?: () => void;
+    className?: string;
+    onSelectIncident?: (id: string) => void;
 }
 
-export const IncidentList: React.FC<IncidentListProps> = ({ isMini = false, onExpandList }) => {
+export const IncidentList: React.FC<IncidentListProps> = ({
+    isMini = false,
+    onExpandList,
+    className = '',
+    onSelectIncident,
+}) => {
     const {
         selectedIncidentId,
         setSelectedIncidentId,
@@ -51,10 +58,15 @@ export const IncidentList: React.FC<IncidentListProps> = ({ isMini = false, onEx
         };
     });
 
+    const handleIncidentClick = (id: string) => {
+        setSelectedIncidentId(id);
+        onSelectIncident?.(id);
+    };
+
     // Render Compact Mini Strip (56px) when agent trace is expanded on smaller screens
     if (isMini) {
         return (
-            <div className="w-[56px] border-r border-surface-container-high/40 flex flex-col items-center justify-between py-3 bg-[#0c0e12]/95 backdrop-blur-md select-none z-10">
+            <div className={`w-[56px] border-r border-surface-container-high/40 flex flex-col items-center justify-between py-3 bg-surface-container-low/95 backdrop-blur-md select-none z-10 ${className}`}>
                 <button
                     onClick={onExpandList}
                     title="Active Outages (Click to Expand List)"
@@ -78,7 +90,7 @@ export const IncidentList: React.FC<IncidentListProps> = ({ isMini = false, onEx
                         return (
                             <button
                                 key={inc.id}
-                                onClick={() => setSelectedIncidentId(inc.id)}
+                                onClick={() => handleIncidentClick(inc.id)}
                                 title={`${inc.title} (${inc.timestamp}) - ${inc.rootCauseService}`}
                                 className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all z-10 hover:scale-105 ${itemStyle}`}
                             >
@@ -96,21 +108,21 @@ export const IncidentList: React.FC<IncidentListProps> = ({ isMini = false, onEx
     }
 
     return (
-        <div className="w-72 border-r border-surface-container-high/40 flex flex-col min-w-0 overflow-y-auto bg-[#0c0e12]/80 backdrop-blur-md select-none">
-            <div className="p-3.5 border-b border-surface-container-high/40 flex items-center justify-between bg-[#111318]/90 sticky top-0 z-10">
+        <div className={`w-full lg:w-72 border-r border-surface-container-high/40 flex flex-col min-w-0 overflow-y-auto bg-surface-container-low/80 backdrop-blur-md select-none ${className}`}>
+            <div className="p-3.5 border-b border-surface-container-high/40 flex items-center justify-between bg-surface-container/90 sticky top-0 z-10">
                 <div className="flex items-center gap-2">
                     <ListFilter className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-[11px] font-bold text-white uppercase tracking-wider font-mono">
+                    <span className="text-[11px] font-bold text-on-surface uppercase tracking-wider font-mono">
                         Active Outages ({displayIncidents.length})
                     </span>
                 </div>
-                <div className="flex gap-1 bg-[#0c0e12] p-0.5 rounded-lg border border-surface-container-high">
+                <div className="flex gap-1 bg-surface-container-lowest p-0.5 rounded-lg border border-surface-container-high">
                     <button
                         onClick={() => setFilterSeverity('all')}
                         className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold transition-all ${
                             filterSeverity === 'all'
-                                ? 'bg-surface-container-high text-white shadow-sm'
-                                : 'text-secondary/70 hover:text-white'
+                                ? 'bg-surface-container-high text-on-surface shadow-sm'
+                                : 'text-secondary hover:text-on-surface'
                         }`}
                     >
                         All
@@ -120,7 +132,7 @@ export const IncidentList: React.FC<IncidentListProps> = ({ isMini = false, onEx
                         className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold transition-all ${
                             filterSeverity === 'critical'
                                 ? 'bg-status-critical/20 text-status-critical shadow-sm'
-                                : 'text-secondary/70 hover:text-white'
+                                : 'text-secondary/70 hover:text-on-surface'
                         }`}
                     >
                         Crit
@@ -174,16 +186,16 @@ export const IncidentList: React.FC<IncidentListProps> = ({ isMini = false, onEx
                                     </div>
                                 </div>
 
-                                <h3 className="font-bold text-white leading-snug text-xs tracking-tight mb-1">
+                                <h3 className="font-bold text-on-surface leading-snug text-xs tracking-tight mb-1">
                                     {inc.title}
                                 </h3>
 
-                                <p className="text-[11px] text-secondary/80 line-clamp-2 mb-2.5 leading-relaxed font-sans">
+                                <p className="text-[11px] text-secondary line-clamp-2 mb-2.5 leading-relaxed font-sans">
                                     {inc.summarySnippet}
                                 </p>
 
-                                <div className="flex items-center justify-between text-[10px] font-mono text-secondary/60 pt-1 border-t border-surface-container-high/20">
-                                    <span className="flex items-center gap-1 text-white/70 font-semibold">
+                                <div className="flex items-center justify-between text-[10px] font-mono text-secondary/70 pt-1 border-t border-surface-container-high/20">
+                                    <span className="flex items-center gap-1 text-on-surface/80 font-semibold">
                                         <span className="w-1.5 h-1.5 rounded-full bg-status-critical" />
                                         {inc.rootCauseService}
                                     </span>

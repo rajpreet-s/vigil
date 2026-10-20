@@ -4,7 +4,7 @@ import { StepSlack } from './StepSlack';
 import { StepPrometheus } from './StepPrometheus';
 import { StepKnowledge } from './StepKnowledge';
 import { StepComplete } from './StepComplete';
-import { Check, Activity, Cpu, Server, Network, RotateCcw, Lock } from 'lucide-react';
+import { Check, Activity, Cpu, Server, Network, RotateCcw, Lock, Sun, Moon } from 'lucide-react';
 import VigilLogo from '../../../components/ui/VigilLogo';
 
 import { useApp } from '../../../context/AppContext';
@@ -14,7 +14,7 @@ interface OnboardingWizardProps {
 }
 
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }) => {
-  const { activeOrg } = useApp();
+  const { activeOrg, theme, toggleTheme } = useApp();
 
   // Restore active step and wizard data from localStorage on page refresh
   const [currentStep, setCurrentStep] = useState<number>(() => {
@@ -144,15 +144,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
   };
 
   return (
-    <div className="w-full min-h-full p-3 sm:p-5 lg:p-7 bg-background text-on-surface lantern-bg">
+    <div className="w-full min-h-full p-3 sm:p-5 lg:p-7 bg-bg text-on-surface lantern-bg">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-12">
         {/* Top Header Banner */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-container-high/60 pb-3">
           <div className="flex items-center gap-3">
-            <VigilLogo height={24} color="#FFFFFF" />
+            <VigilLogo height={24} />
             <div className="h-4 w-px bg-surface-container-high/60 hidden sm:block" />
             <div>
-              <h1 className="text-sm sm:text-base font-bold text-white font-display tracking-tight leading-snug">
+              <h1 className="text-sm sm:text-base font-bold text-on-surface font-display tracking-tight leading-snug">
                 Setup & Telemetry Onboarding
               </h1>
               <p className="text-[11px] text-secondary/80 flex items-center gap-2">
@@ -175,8 +175,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={toggleTheme}
+              className="p-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-secondary hover:text-on-surface transition-all border border-surface-container-highest flex items-center justify-center shadow-sm"
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+            >
+              {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-primary" /> : <Moon className="w-3.5 h-3.5 text-primary" />}
+            </button>
+
+            <button
+              type="button"
               onClick={handleResetWizard}
-              className="text-xs px-2.5 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-secondary/80 hover:text-white transition-all border border-surface-container-highest flex items-center gap-1.5"
+              className="text-xs px-2.5 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-secondary/80 hover:text-on-surface transition-all border border-surface-container-highest flex items-center gap-1.5"
               title="Reset onboarding progress"
             >
               <RotateCcw className="w-3 h-3" />
@@ -200,7 +209,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
         </div>
 
         {/* Compact Responsive Progress Bar for Screens < lg */}
-        <div className="lg:hidden bg-[#111318]/90 backdrop-blur-xl border border-surface-container-high/60 rounded-xl p-3 shadow-md">
+        <div className="lg:hidden bg-surface-container/90 backdrop-blur-xl border border-surface-container-high/60 rounded-xl p-3 shadow-md">
           <div className="flex items-center justify-between gap-1 overflow-x-auto">
             {steps.map((s, idx) => {
               const isActive = currentStep === s.num;
@@ -251,8 +260,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
           {/* Left Column (4 cols): Visible on Desktop (>= lg) */}
           <div className="hidden lg:block lg:col-span-4 space-y-5">
             {/* Step Navigation Sidebar */}
-            <div className="bg-[#111318]/90 backdrop-blur-xl border border-surface-container-high/60 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
-              <div className="text-xs font-bold text-white uppercase tracking-wider mb-2 flex items-center justify-between border-b border-surface-container-high/40 pb-2">
+            <div className="bg-surface-container/90 backdrop-blur-xl border border-surface-container-high/60 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
+              <div className="text-xs font-bold text-on-surface uppercase tracking-wider mb-2 flex items-center justify-between border-b border-surface-container-high/40 pb-2">
                 <span>Setup Workflow</span>
                 <span className="font-mono text-primary text-[11px]">Step {currentStep} of 5</span>
               </div>
@@ -300,7 +309,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
                       <div className="overflow-hidden">
                         <div
                           className={`text-xs font-bold transition-colors ${
-                            isActive ? 'text-primary' : isDone ? 'text-emerald-400' : 'text-white/80'
+                            isActive ? 'text-primary' : isDone ? 'text-emerald-400' : 'text-on-surface/80'
                           }`}
                         >
                           {s.label}
@@ -314,8 +323,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
             </div>
 
             {/* Live System Diagnostics Box */}
-            <div className="bg-[#111318]/90 backdrop-blur-xl border border-surface-container-high/60 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
-              <div className="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between border-b border-surface-container-high/40 pb-2">
+            <div className="bg-surface-container/90 backdrop-blur-xl border border-surface-container-high/60 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
+              <div className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center justify-between border-b border-surface-container-high/40 pb-2">
                 <span className="flex items-center gap-1.5">
                   <Activity className="w-3.5 h-3.5 text-primary" />
                   Live Cluster Telemetry
@@ -345,7 +354,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
                     <Network className="w-3.5 h-3.5 text-secondary" />
                     Causal Edges
                   </span>
-                  <span className="font-mono text-white">{status?.integrations?.topology?.edgeCount || 0} configured</span>
+                  <span className="font-mono text-on-surface">{status?.integrations?.topology?.edgeCount || 0} configured</span>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -361,7 +370,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
 
           {/* Right Column (8 cols desktop / 12 cols mobile): Interactive Step Card */}
           <div className="w-full lg:col-span-8">
-            <div className="bg-[#111318]/90 backdrop-blur-2xl border border-surface-container-high/60 rounded-2xl p-4 sm:p-6 lg:p-7 shadow-2xl relative">
+            <div className="bg-surface-container/90 backdrop-blur-2xl border border-surface-container-high/60 rounded-2xl p-4 sm:p-6 lg:p-7 shadow-2xl relative">
               {currentStep === 1 && <StepWorkspace onNext={handleNextStep} status={status} isOwner={isOwner} />}
               {currentStep === 2 && <StepPrometheus onNext={handleNextStep} onBack={handlePrevStep} />}
               {currentStep === 3 && <StepSlack onNext={handleNextStep} onBack={handlePrevStep} status={status} isOwner={isOwner} />}
