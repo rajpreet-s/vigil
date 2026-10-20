@@ -150,6 +150,16 @@ describe("buildCausalTimeline", () => {
         expect(result.map((a) => a.service_name)).toContain("postgres");
         expect(result.map((a) => a.service_name)).toContain("api");
     });
+
+    it("keeps multi-hop anomalies connected even when intermediate service does not alert", () => {
+        // nginx calls api, api calls postgres
+        // only nginx and postgres fire alerts (api is resilient or un-alerted)
+        const graph = makeGraph([["nginx", "api"], ["api", "postgres"]]);
+        const raw = [anomaly("nginx", T2), anomaly("postgres", T0)];
+
+        const result = buildCausalTimeline(raw, graph);
+        expect(result.map((a) => a.service_name)).toEqual(["postgres", "nginx"]);
+    });
 });
 
 // ─── buildCausalTimelineWithoutTopology ──────────────────────────────────────

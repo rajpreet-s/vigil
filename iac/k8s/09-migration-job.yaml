@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vigil-db-migrate
+  namespace: vigil
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: prisma-migrate
+          image: us-central1-docker.pkg.dev/project-60bff6c1-455a-4a5c-b3d/vigil-repo/vigil-api:latest
+          imagePullPolicy: Always
+          command: ["npx", "prisma", "migrate", "deploy"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vigil-secrets
+                  key: DATABASE_URL
+          
+  

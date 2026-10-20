@@ -2,6 +2,7 @@ import { PrismaClient, Severity } from '@prisma/client';
 import type { FastifyBaseLogger } from 'fastify';
 import type { AlertPayload, GitHubCommit } from '../types/webhook.js';
 import { IncidentCoordinator } from './incident-coordinator/IncidentCoordinator.js';
+import { extractServiceNameFromLabels, servicesMatch } from './incident-coordinator/normalizer.js';
 
 export class WebhookService {
     private prisma: PrismaClient;
@@ -18,20 +19,38 @@ export class WebhookService {
      * using read-heavy optimizations and idempotency safety.
      */
     public async processAlert(alert: AlertPayload, orgId?: string): Promise<void> {
-        const serviceName = alert.labels.service;
-        const alertName = alert.labels.alertname;
-        this.logger?.info(`[VIGIL INGEST] Alert received: service=${serviceName}, alertname=${alertName}, severity=${alert.labels.severity}`);
+        const rawServiceName = extractServiceNameFromLabels(alert.labels) || alert.labels.service || 'unknown-service';
+        const alertName = alert.labels.alertname || 'UnknownAlert';
+        this.logger?.info(`[VIGIL INGEST] Alert received: rawService=${rawServiceName}, alertname=${alertName}, severity=${alert.labels.severity}`);
 
-        const formattedDisplayName = serviceName
-            .replace(/[-_]/g, ' ')
-            .replace(/\b\w/g, (char) => char.toUpperCase());
-
-        // 1. Read-heavy optimization: Check if it exists first (Fast index read, no write-locks)
+        // 1. Read-heavy optimization: Check if it exists first by exact name
         let service = await this.prisma.service.findUnique({
-            where: { name: serviceName },
+            where: { name: rawServiceName },
         });
 
-        // 2. Provision dynamically ONLY if it doesn't exist
+        // 2. Fuzzy match against existing services to avoid duplicating "checkout" vs "checkout-service"
+        if (!service) {
+            const allServices = await this.prisma.service.findMany({
+                where: orgId ? { OR: [{ org_id: orgId }, { org_id: null }] } : {},
+                select: { id: true, name: true, display_name: true, org_id: true },
+            });
+            const matchedService = allServices.find((s) => servicesMatch(s.name, rawServiceName));
+            if (matchedService) {
+                this.logger?.info(
+                    `[VIGIL INGEST] Fuzzy matched incoming alert service "${rawServiceName}" to existing canonical service "${matchedService.name}"`
+                );
+                service = matchedService as any;
+            }
+        }
+
+        const serviceName = service ? service.name : rawServiceName;
+        const formattedDisplayName =
+            service?.display_name ||
+            serviceName
+                .replace(/[-_]/g, ' ')
+                .replace(/\b\w/g, (char) => char.toUpperCase());
+
+        // 3. Provision dynamically ONLY if it doesn't exist
         if (!service) {
             try {
                 service = await this.prisma.service.create({

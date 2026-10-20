@@ -19,6 +19,7 @@ export function buildCausalTimeline(rawAnomalies: Anomaly[], topology: TopologyG
     const anomalousServices = new Set<string>(rawAnomalies.map((a) => a.service_name));
 
     const connected = rawAnomalies.filter((anomaly) => {
+        // Direct 1-hop check first (fast path)
         const hasAnomalousUpstream = topology
             .getUpstream(anomaly.service_name)
             .some((s) => anomalousServices.has(s));
@@ -27,7 +28,25 @@ export function buildCausalTimeline(rawAnomalies: Anomaly[], topology: TopologyG
             .getDownstream(anomaly.service_name)
             .some((s) => anomalousServices.has(s));
 
-        return hasAnomalousUpstream || hasAnomalousDownstream;
+        if (hasAnomalousUpstream || hasAnomalousDownstream) {
+            return true;
+        }
+
+        // Transitive multi-hop check: is this service connected to any other anomalous service
+        // via directed dependency (isUpstreamOf) or graph proximity (areConnected)?
+        for (const otherService of anomalousServices) {
+            if (otherService === anomaly.service_name) continue;
+
+            if (
+                topology.isUpstreamOf(otherService, anomaly.service_name) ||
+                topology.isUpstreamOf(anomaly.service_name, otherService) ||
+                (topology.areConnected && topology.areConnected(anomaly.service_name, otherService, 3))
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     });
 
     return connected.sort((a, b) => a.detected_at.getTime() - b.detected_at.getTime());
@@ -95,13 +114,17 @@ export function pickRootCause(
 
     // Normal case: topology + connected chain.
     // causalTimeline[0] is the earliest service in the causal chain.
-    // Check if anything upstream of it is also anomalous.
+    // Check if anything upstream of it (direct or transitive) is also anomalous.
     const candidate = causalTimeline[0];
 
     const anomalousServices = new Set<string>(rawAnomalies.map((a) => a.service_name));
-    const hasAnomalousUpstream = topology
-        .getUpstream(candidate.service_name)
-        .some((s) => anomalousServices.has(s));
+    const hasAnomalousUpstream = [...anomalousServices].some((s) => {
+        if (s === candidate.service_name) return false;
+        return (
+            topology.getUpstream(candidate.service_name).includes(s) ||
+            topology.isUpstreamOf(s, candidate.service_name)
+        );
+    });
 
     if (!hasAnomalousUpstream) {
         // Earliest in the chain AND nothing upstream is anomalous.

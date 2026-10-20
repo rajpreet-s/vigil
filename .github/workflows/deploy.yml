@@ -232,6 +232,13 @@ jobs:
           kubectl apply -f iac/k8s/07-frontend-config.yaml
           kubectl apply -f iac/k8s/08-hpa.yaml
 
+      - name: Run Database Migrations
+        if: needs.build-api.result == 'success'
+        run: |
+          kubectl delete job vigil-db-migrate -n vigil --ignore-not-found
+          kubectl apply -f iac/k8s/09-migration-job.yaml
+          kubectl wait --for=condition=complete --timeout=120s job/vigil-db-migrate -n vigil
+  
       # Update deployment images to the immutable Git SHA tag
       - name: Deploy vigil-api
         if: needs.build-api.result == 'success'
