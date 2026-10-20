@@ -2,38 +2,135 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+@layer base {
+  *, ::before, ::after {
+    border-color: var(--outline);
+  }
+}
+
+:root,
+html.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces & Backgrounds */
   --bg: #0c0e13;
+  --surface: #111318;
   --surface-low: #1a1b21;
-  --surface: #1e1f25;
-  --surface-high: #282a2f;
-  --surface-highest: #33353a;
+  --surface-container: #1e1f25;
+  --surface-container-high: #282a2f;
+  --surface-container-highest: #33353a;
+  --surface-container-lowest: #0c0e13;
+
+  /* Typography & Foreground */
   --on-surface: #e2e2e9;
   --on-surface-muted: #8d8d94;
+  --on-surface-variant: #d6c3af;
+  --secondary: #c4c6cf;
   --tan: #c9b8a3;
   --outline: #2d3037;
+  --outline-variant: #514535;
+
+  /* Brand Accents */
   --primary: #ffd98a;
   --on-primary: #2a1a00;
+  --primary-container: #ffddb5;
+  --on-primary-container: #2a1800;
+
+  /* Semantic SRE Status Tokens */
+  --status-critical: #ff6b6b;
+  --status-critical-bg: rgba(255, 107, 107, 0.12);
   --critical: #ff6b6b;
   --critical-fill: #3a1a1a;
+  --status-warning: #f2a93b;
+  --status-warning-bg: rgba(242, 169, 59, 0.12);
   --warning: #f2a93b;
   --warning-fill: #3a2a10;
+  --status-healthy: #34d399;
+  --status-healthy-bg: rgba(52, 211, 153, 0.12);
   --healthy: #34d399;
+  --status-info: #60a5fa;
+  --status-info-bg: rgba(96, 165, 250, 0.12);
   --info: #60a5fa;
+  --status-low-confidence: #ff9c6e;
   --radius: 10px;
+
+  /* Ambient Mesh & Glows */
+  --primary-glow: rgba(255, 202, 133, 0.3);
+  --secondary-glow: rgba(242, 169, 59, 0.2);
+  --tertiary-glow: rgba(235, 94, 40, 0.15);
+  --grid-color: rgba(158, 142, 124, 0.04);
+  --noise-opacity: 0.015;
+  --glass-specular: rgba(255, 255, 255, 0.015);
+  --shimmer-1: #1a1b21;
+  --shimmer-2: #282a2f;
+}
+
+html:not(.dark),
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Surfaces & Backgrounds (Warm Sand / Alabaster) */
+  --bg: #f7f6f2;
+  --surface: #edebe6;
+  --surface-low: #f4f2ee;
+  --surface-container: #ffffff;
+  --surface-container-high: #e5e2da;
+  --surface-container-highest: #d9d5cb;
+  --surface-container-lowest: #fcfbf9;
+
+  /* Typography & Foreground (Deep Charcoal for 7:1+ contrast) */
+  --on-surface: #191c22;
+  --on-surface-muted: #5f6368;
+  --on-surface-variant: #4f463b;
+  --secondary: #5a5d66;
+  --tan: #8a7c6c;
+  --outline: #d3cfc6;
+  --outline-variant: #beb8ab;
+
+  /* Brand Accents */
+  --primary: #c47700; /* Warm amber-gold with AA contrast */
+  --on-primary: #ffffff;
+  --primary-container: #ffd98a;
+  --on-primary-container: #452b00;
+
+  /* Semantic SRE Status Tokens */
+  --status-critical: #dc2626;
+  --status-critical-bg: rgba(220, 38, 38, 0.1);
+  --critical: #dc2626;
+  --critical-fill: #fee2e2;
+  --status-warning: #d97706;
+  --status-warning-bg: rgba(217, 119, 6, 0.1);
+  --warning: #d97706;
+  --warning-fill: #fef3c7;
+  --status-healthy: #059669;
+  --status-healthy-bg: rgba(5, 150, 105, 0.1);
+  --healthy: #059669;
+  --status-info: #2563eb;
+  --status-info-bg: rgba(37, 99, 235, 0.1);
+  --info: #2563eb;
+  --status-low-confidence: #ea580c;
+  --radius: 10px;
+
+  /* Ambient Mesh & Glows */
+  --primary-glow: rgba(242, 169, 59, 0.22);
+  --secondary-glow: rgba(255, 182, 146, 0.18);
+  --tertiary-glow: rgba(235, 94, 40, 0.12);
+  --grid-color: rgba(81, 69, 53, 0.07);
+  --noise-opacity: 0.015;
+  --glass-specular: rgba(0, 0, 0, 0.02);
+  --shimmer-1: #e5e2da;
+  --shimmer-2: #f2f0ec;
 }
 
 @layer base {
-  :root {
-    color-scheme: dark;
-  }
-  
   body {
     font-family: 'Inter', sans-serif;
     background-color: var(--bg);
     color: var(--on-surface);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
@@ -53,12 +150,20 @@
   background: rgba(255, 255, 255, 0.25);
 }
 
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+}
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.32);
+}
+
 /* ── SRE Dashboard Grid Backdrop & Mesh ─────── */
 .lantern-bg {
   position: relative;
   background-color: var(--bg);
   min-height: 100vh;
   overflow: hidden;
+  transition: background-color 0.3s ease;
 }
 
 /* Grid mesh overlay */
@@ -67,8 +172,8 @@
   position: absolute;
   inset: 0;
   background-image: 
-    linear-gradient(to right, rgba(158, 142, 124, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(158, 142, 124, 0.04) 1px, transparent 1px);
+    linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
   background-size: 40px 40px;
   pointer-events: none;
   z-index: 1;
@@ -80,7 +185,7 @@
   position: absolute;
   inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  opacity: 0.015;
+  opacity: var(--noise-opacity);
   pointer-events: none;
   z-index: 3;
 }
@@ -101,12 +206,17 @@
   will-change: transform, border-radius;
 }
 
+html:not(.dark) .liquid-blob {
+  mix-blend-mode: multiply;
+  opacity: 0.45;
+}
+
 .liquid-blob-1 {
   width: 600px;
   height: 600px;
   top: -20%;
   left: 10%;
-  background: radial-gradient(circle, rgba(255, 202, 133, 0.3) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
   animation: liquidMorph1 18s infinite ease-in-out alternate;
 }
 
@@ -115,7 +225,7 @@
   height: 700px;
   bottom: -25%;
   right: -5%;
-  background: radial-gradient(circle, rgba(242, 169, 59, 0.2) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--secondary-glow) 0%, transparent 70%);
   animation: liquidMorph2 22s infinite ease-in-out alternate;
 }
 
@@ -124,7 +234,7 @@
   height: 500px;
   top: 20%;
   right: 20%;
-  background: radial-gradient(circle, rgba(235, 94, 40, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--tertiary-glow) 0%, transparent 70%);
   animation: liquidMorph3 16s infinite ease-in-out alternate-reverse;
 }
 
@@ -259,12 +369,24 @@
   padding: 16px 18px;
 }
 
+html:not(.dark) .draft-card {
+  background: linear-gradient(160deg, rgba(242, 169, 59, 0.06), rgba(255, 255, 255, 0.95)) !important;
+  border-color: var(--outline) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
 .draft-text {
   font-family: 'JetBrains Mono', monospace;
   background: rgba(0, 0, 0, 0.25) !important;
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 8px;
   padding: 12px 14px;
+}
+
+html:not(.dark) .draft-text {
+  background: rgba(247, 246, 242, 0.9) !important;
+  border-color: var(--outline);
+  color: var(--on-surface) !important;
 }
 
 /* ---------- Dev Diagnostics Dropdown (More blur, Less transparent) ---------- */
@@ -277,6 +399,11 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
   padding: 12px;
   min-width: 190px;
+}
+
+html:not(.dark) .devmenu {
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* ---------- DAG Rail & CSS Column Transition ────── */
@@ -411,7 +538,7 @@
 .dag-node.done {
   color: var(--healthy);
   border-color: rgba(52, 211, 153, 0.3);
-  background: rgba(52, 211, 153, 0.02);
+  background: rgba(52, 211, 153, 0.05);
 }
 
 .dag-node.active {
@@ -454,6 +581,10 @@
   -webkit-backdrop-filter: blur(14px) !important;
 }
 
+html:not(.dark) .audit-panel {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
 .body-grid.expanded .audit-panel.show {
   display: flex;
 }
@@ -493,7 +624,7 @@
 
 /* Shimmer skeletons */
 .shimmer-bg {
-  background: linear-gradient(90deg, #1a1b21 25%, #282a2f 50%, #1a1b21 75%);
+  background: linear-gradient(90deg, var(--shimmer-1) 25%, var(--shimmer-2) 50%, var(--shimmer-1) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }

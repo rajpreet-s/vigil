@@ -112,7 +112,7 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack, is
           <Network className="w-3.5 h-3.5" />
           <span>Step 4 of 4 • Causal Service Topology</span>
         </div>
-        <h3 className="text-xl font-bold text-white font-display tracking-tight">
+        <h3 className="text-xl font-bold text-on-surface font-display tracking-tight">
           Service Dependency Topology
         </h3>
         <p className="text-xs text-secondary/80 mt-0.5">
@@ -134,12 +134,12 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack, is
             <Layers className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs font-bold text-white flex items-center gap-2">
+            <div className="text-xs font-bold text-on-surface flex items-center gap-2">
               <span>Standard Microservices Template</span>
               <span className="text-[10px] font-mono bg-primary/20 text-primary px-2 py-0.5 rounded">1-Click</span>
             </div>
             <p className="text-[11px] text-secondary/80 mt-0.5 leading-relaxed">
-              Auto-populates: <code className="text-white font-mono">api-gateway</code> ➔ <code className="text-white font-mono">auth/order/payment</code> ➔ <code className="text-white font-mono">postgres/redis</code>.
+              Auto-populates: <code className="text-on-surface font-mono">api-gateway</code> ➔ <code className="text-on-surface font-mono">auth/order/payment</code> ➔ <code className="text-on-surface font-mono">postgres/redis</code>.
             </p>
           </div>
         </div>
@@ -166,7 +166,7 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack, is
 
       {/* Manual Custom Edge Form */}
       <div className="p-4 rounded-xl bg-surface-container-low/60 border border-surface-container-high/60 space-y-3">
-        <div className="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
+        <div className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center justify-between">
           <span>Add Custom Service Edge</span>
           <span className="text-[11px] font-mono text-secondary/70">Upstream ➔ Downstream</span>
         </div>
@@ -179,7 +179,7 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack, is
               value={upstream}
               disabled={!isOwner}
               onChange={(e) => setUpstream(e.target.value)}
-              className={`bg-[#0c0e13] border border-surface-container-high rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary font-mono ${
+              className={`bg-surface-container-lowest border border-surface-container-high rounded-lg px-3 py-2 text-xs text-on-surface focus:outline-none focus:border-primary font-mono ${
                 !isOwner ? 'opacity-60 cursor-not-allowed' : ''
               }`}
             />
@@ -189,7 +189,7 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack, is
               value={downstream}
               disabled={!isOwner}
               onChange={(e) => setDownstream(e.target.value)}
-              className={`bg-[#0c0e13] border border-surface-container-high rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary font-mono ${
+              className={`bg-surface-container-lowest border border-surface-container-high rounded-lg px-3 py-2 text-xs text-on-surface focus:outline-none focus:border-primary font-mono ${
                 !isOwner ? 'opacity-60 cursor-not-allowed' : ''
               }`}
             />
@@ -199,7 +199,7 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack, is
               value={description}
               disabled={!isOwner}
               onChange={(e) => setDescription(e.target.value)}
-              className={`bg-[#0c0e13] border border-surface-container-high rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-primary font-sans ${
+              className={`bg-surface-container-lowest border border-surface-container-high rounded-lg px-3 py-2 text-xs text-on-surface focus:outline-none focus:border-primary font-sans ${
                 !isOwner ? 'opacity-60 cursor-not-allowed' : ''
               }`}
             />
@@ -209,7 +209,7 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack, is
             <button
               type="submit"
               disabled={!isOwner || isSavingTopo || !upstream || !downstream}
-              className="px-3.5 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-white text-xs font-semibold border border-surface-container-highest flex items-center gap-1.5 transition-all disabled:opacity-50"
+              className="px-3.5 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold border border-surface-container-highest flex items-center gap-1.5 transition-all disabled:opacity-50"
             >
               <Plus className="w-3.5 h-3.5 text-primary" />
               <span>{isSavingTopo ? 'Saving Edge...' : 'Add Dependency Edge'}</span>
@@ -219,8 +219,8 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack, is
       </div>
 
       {/* Active Edges List */}
-      <div className="p-3.5 rounded-xl bg-[#0c0e13] border border-surface-container-high space-y-2">
-        <div className="flex items-center justify-between text-xs font-bold text-white uppercase tracking-wider pb-1 border-b border-surface-container-high/40">
+      <div className="p-3.5 rounded-xl bg-surface-container border border-surface-container-high space-y-2">
+        <div className="flex items-center justify-between text-xs font-bold text-on-surface uppercase tracking-wider pb-1 border-b border-surface-container-high/40">
           <span className="flex items-center gap-2">
             <span>Active Graph Dependencies</span>
             <span className={`font-mono text-[11px] px-1.5 py-0.2 rounded ${edges.length > 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
@@ -284,7 +284,7 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack, is
       )}
 
       {/* Sticky Bottom Navigation Footer */}
-      <div className="sticky bottom-0 bg-[#111318]/95 backdrop-blur-md pt-4 pb-1 border-t border-surface-container-high/60 z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="sticky bottom-0 bg-surface-container/95 backdrop-blur-md pt-4 pb-1 border-t border-surface-container-high/60 z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
         <button
           type="button"
           onClick={onBack}

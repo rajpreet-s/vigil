@@ -25,7 +25,7 @@ export const Badge: React.FC<BadgeProps> = ({
       healthy: 'bg-[#34d399] text-[#00391c]',
       info: 'bg-[#60a5fa] text-[#0f2d59]',
       'low-confidence': 'bg-[#ff9c6e] text-[#552000]',
-      secondary: 'bg-surface-container-highest text-white',
+      secondary: 'bg-surface-container-highest text-on-surface',
     };
     return (
       <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold font-mono tracking-wider uppercase border border-transparent shadow-sm ${severityStyles[variant]} ${className}`}>

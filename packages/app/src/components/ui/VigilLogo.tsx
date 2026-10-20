@@ -1,7 +1,7 @@
 interface VigilLogoProps {
     /** Height of the logo text in px (default 22) */
     height?: number;
-    /** Fill colour (default #E8EAED — near-white on dark bg) */
+    /** Fill colour (default 'currentColor' for theme adaptability) */
     color?: string;
     className?: string;
 }
@@ -12,7 +12,7 @@ interface VigilLogoProps {
  */
 export default function VigilLogo({
     height = 22,
-    color = '#E8EAED',
+    color = 'currentColor',
     className = '',
 }: VigilLogoProps) {
     const fontSize = height * 1.4;
@@ -49,3 +49,5 @@ export default function VigilLogo({
         </svg>
     );
 }
+
+export { VigilLogo };

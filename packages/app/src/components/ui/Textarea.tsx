@@ -21,7 +21,7 @@ export const Textarea: React.FC<TextareaProps> = ({
       )}
       <textarea
         id={id}
-        className={`w-full bg-surface-container-lowest border border-outline-variant/60 rounded-md p-3 text-xs text-white font-mono leading-relaxed focus:outline focus:outline-2 focus:outline-primary transition-all resize-none ${className}`}
+        className={`w-full bg-surface-container-lowest border border-outline-variant/60 rounded-md p-3 text-xs text-on-surface font-mono leading-relaxed focus:outline focus:outline-2 focus:outline-primary transition-all resize-none ${className}`}
         {...props}
       />
       {error && (

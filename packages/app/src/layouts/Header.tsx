@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { RefreshCw, Settings } from 'lucide-react';
+import { RefreshCw, Settings, Menu, Sun, Moon } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const Header: React.FC = () => {
@@ -10,6 +10,9 @@ export const Header: React.FC = () => {
     setConnectionState,
     isRefreshing,
     triggerRefresh,
+    theme,
+    toggleTheme,
+    toggleMobileDrawer,
   } = useApp();
 
   const [showDevMenu, setShowDevMenu] = useState(false);
@@ -22,6 +25,8 @@ export const Header: React.FC = () => {
         return 'Runbook KB';
       case '/evals':
         return 'Agent Evaluation Suite';
+      case '/onboarding':
+        return 'Setup & Telemetry';
       case '/incidents':
       default:
         return 'Incidents Monitor';
@@ -29,60 +34,94 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="h-16 border-b border-surface-container-high/40 flex items-center justify-between px-8 bg-surface-container-low/20 backdrop-blur-md relative">
-      <div className="flex items-center gap-4">
-        <h2 className="text-[13px] font-headline-sm font-bold text-white/50 tracking-wider uppercase">{getTitle()}</h2>
+    <header className="h-16 border-b border-surface-container-high/40 flex items-center justify-between px-3 sm:px-6 md:px-8 bg-surface-container-low/40 backdrop-blur-md relative select-none">
+      <div className="flex items-center gap-2.5 sm:gap-4">
+        {/* Mobile menu hamburger toggle */}
+        <button
+          onClick={toggleMobileDrawer}
+          className="lg:hidden p-2 -ml-1 text-secondary hover:text-on-surface hover:bg-surface-container-high/40 rounded-lg transition-all"
+          aria-label="Toggle navigation menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <h2 className="text-xs sm:text-[13px] font-headline-sm font-bold text-on-surface/70 tracking-wider uppercase truncate max-w-[140px] sm:max-w-none">
+          {getTitle()}
+        </h2>
         
-        {/* Connected status badge (quiet) */}
-        <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[10px] font-mono transition-all duration-300 ${
-          connectionState === 'connected' ? 'bg-status-healthy/5 text-status-healthy/90 border-status-healthy/20' :
-          connectionState === 'reconnecting' ? 'bg-status-warning/5 text-status-warning/90 border-status-warning/20' :
-          'bg-status-critical/5 text-status-critical/90 border-status-critical/20'
+        {/* Connected status badge (quiet & responsive) */}
+        <div className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-0.5 rounded-full border text-[9px] sm:text-[10px] font-mono transition-all duration-300 ${
+          connectionState === 'connected' ? 'bg-status-healthy/10 text-status-healthy border-status-healthy/20' :
+          connectionState === 'reconnecting' ? 'bg-status-warning/10 text-status-warning border-status-warning/20' :
+          'bg-status-critical/10 text-status-critical border-status-critical/20'
         }`}>
           <span className={`w-1.5 h-1.5 rounded-full ${
             connectionState === 'connected' ? 'bg-status-healthy' :
             connectionState === 'reconnecting' ? 'bg-status-warning animate-pulse' :
             'bg-status-critical'
           }`} />
-          <span>Agent: {connectionState === 'connected' ? 'Connected' : connectionState === 'reconnecting' ? 'Reconnecting' : 'Disconnected'}</span>
+          <span className="hidden sm:inline">Agent: {connectionState === 'connected' ? 'Connected' : connectionState === 'reconnecting' ? 'Reconnecting' : 'Disconnected'}</span>
+          <span className="sm:hidden">{connectionState === 'connected' ? 'Live' : 'Offline'}</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3">
+        {/* Theme Toggle Button */}
+        <button
+          onClick={toggleTheme}
+          className="p-2 text-secondary hover:text-on-surface hover:bg-surface-container-high/50 rounded-lg transition-all"
+          title={theme === 'dark' ? 'Switch to Light Mode ("Dawn")' : 'Switch to Dark Mode ("Vigil")'}
+          aria-label="Toggle visual theme"
+        >
+          {theme === 'dark' ? (
+            <Sun className="w-4 h-4 text-primary hover:rotate-45 transition-transform" />
+          ) : (
+            <Moon className="w-4 h-4 text-amber-700 hover:-rotate-12 transition-transform" />
+          )}
+        </button>
+
+        {/* Sync metrics button */}
         <button
           onClick={triggerRefresh}
-          className="p-2 text-secondary hover:text-white hover:bg-surface-container-high/40 rounded-lg transition-all"
+          className="p-2 text-secondary hover:text-on-surface hover:bg-surface-container-high/40 rounded-lg transition-all"
           title="Sync metrics"
+          aria-label="Sync metrics"
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-primary' : ''}`} />
         </button>
         
-        <div className="h-4 w-px bg-surface-container-high/40"></div>
+        <div className="h-4 w-px bg-surface-container-high/60"></div>
         
-        {/* dev settings gear icon to hold dev diagnostic tools */}
+        {/* Dev settings gear icon */}
         <div className="relative">
           <button
             onClick={() => setShowDevMenu(!showDevMenu)}
-            className={`p-2 text-secondary hover:text-white hover:bg-surface-container-high/40 rounded-lg transition-all ${showDevMenu ? 'text-white bg-surface-container-high/40' : ''}`}
+            className={`p-2 text-secondary hover:text-on-surface hover:bg-surface-container-high/40 rounded-lg transition-all ${showDevMenu ? 'text-on-surface bg-surface-container-high/40' : ''}`}
             title="Dev Diagnostic Tools"
+            aria-label="Dev Diagnostic Tools"
           >
             <Settings className="w-4 h-4" />
           </button>
 
           {showDevMenu && (
-            <div className="absolute right-0 top-10 z-50 w-48 bg-surface-container border border-surface-container-high rounded-lg p-3 shadow-xl text-[10px] font-mono space-y-2.5">
-              <div className="border-b border-surface-container-high pb-1.5 text-secondary/70 font-bold uppercase tracking-wider">
-                Dev Diagnostics
+            <div className="absolute right-0 top-10 z-50 w-52 bg-surface-container border border-surface-container-high rounded-xl p-3 shadow-2xl text-[10px] font-mono space-y-2.5 animate-fadeIn">
+              <div className="border-b border-surface-container-high pb-1.5 text-secondary/70 font-bold uppercase tracking-wider flex items-center justify-between">
+                <span>Dev Diagnostics</span>
+                <span className="text-[9px] text-primary">{theme.toUpperCase()}</span>
               </div>
               <div className="flex items-center justify-between text-secondary">
                 <span>API Local Port:</span>
-                <span className="text-white">8080</span>
+                <span className="text-on-surface font-semibold">8080</span>
+              </div>
+              <div className="flex items-center justify-between text-secondary">
+                <span>Theme Mode:</span>
+                <span className="text-on-surface font-semibold capitalize">{theme}</span>
               </div>
               <div className="flex items-center justify-between text-secondary">
                 <span>SSE Connection:</span>
                 <button
                   onClick={() => setConnectionState(connectionState === 'connected' ? 'disconnected' : 'connected')}
-                  className="bg-surface-container-high border border-outline-variant/35 text-[9px] font-bold text-white px-2 py-0.5 rounded hover:bg-surface-container-highest transition-all"
+                  className="bg-surface-container-high border border-outline-variant/35 text-[9px] font-bold text-on-surface px-2 py-0.5 rounded hover:bg-surface-container-highest transition-all"
                 >
                   {connectionState === 'connected' ? 'Drop Sync' : 'Restore Sync'}
                 </button>

@@ -31,7 +31,7 @@ export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData: _summar
       </div>
 
       <div>
-        <h3 className="text-2xl font-bold text-white font-display tracking-tight mb-1">
+        <h3 className="text-2xl font-bold text-on-surface font-display tracking-tight mb-1">
           Vigil SRE Copilot Ready
         </h3>
         <p className="text-xs text-secondary/80 max-w-sm mx-auto">
@@ -40,13 +40,13 @@ export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData: _summar
       </div>
 
       {/* Integration Checklist Card */}
-      <div className="p-4 rounded-xl bg-[#0c0e13] border border-surface-container-high max-w-md mx-auto text-left space-y-2.5">
+      <div className="p-4 rounded-xl bg-surface-container border border-surface-container-high max-w-md mx-auto text-left space-y-2.5">
         <div className="text-[10px] font-bold text-secondary/60 uppercase tracking-wider mb-1 border-b border-surface-container-high pb-2">
           Workspace Readiness Audit
         </div>
 
         <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-2 text-white/90">
+          <span className="flex items-center gap-2 text-on-surface">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             <span>Self-Hosted & Gemini Engine</span>
           </span>
@@ -56,7 +56,7 @@ export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData: _summar
         </div>
 
         <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-2 text-white/90">
+          <span className="flex items-center gap-2 text-on-surface">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             <span>Slack Webhook Notifications</span>
           </span>
@@ -66,7 +66,7 @@ export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData: _summar
         </div>
 
         <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-2 text-white/90">
+          <span className="flex items-center gap-2 text-on-surface">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             <span>Prometheus Webhook Ingestion</span>
           </span>
@@ -76,7 +76,7 @@ export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData: _summar
         </div>
 
         <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-2 text-white/90">
+          <span className="flex items-center gap-2 text-on-surface">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             <span>Topology Graph & Vector Index</span>
           </span>
@@ -100,3 +100,5 @@ export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData: _summar
     </div>
   );
 };
+
+export default StepComplete;

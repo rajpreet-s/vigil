@@ -53,10 +53,10 @@ export const AccessibleDagTable: React.FC = () => {
     ];
 
     return (
-        <div className="overflow-hidden rounded-xl border border-surface-container-high/50 bg-surface-container-low/40 backdrop-blur-md">
+        <div className="overflow-hidden rounded-xl border border-surface-container-high/50 bg-surface-container-low backdrop-blur-md">
             <table className="w-full text-left text-[11px] font-mono border-collapse">
                 <thead>
-                    <tr className="bg-surface-container-high/50 border-b border-surface-container-high text-secondary/70">
+                    <tr className="bg-surface-container/60 border-b border-surface-container-high text-secondary/70">
                         <th className="py-2.5 px-4 font-bold uppercase tracking-wider text-[9px]">
                             Node
                         </th>
@@ -74,7 +74,7 @@ export const AccessibleDagTable: React.FC = () => {
                             key={row.node}
                             className="hover:bg-surface-container-high/25 transition-all"
                         >
-                            <td className="py-3 px-4 text-white font-bold">{row.node}</td>
+                            <td className="py-3 px-4 text-on-surface font-bold">{row.node}</td>
                             <td className="py-3 px-4">
                                 <Badge variant={row.variant as any} category="status">
                                     {row.status.toUpperCase()}

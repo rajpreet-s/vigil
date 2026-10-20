@@ -31,14 +31,14 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-background/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn"
       onClick={onClose}
     >
       <div 
         className="bg-surface border border-surface-container-high/60 p-6 rounded-xl shadow-2xl max-w-md w-full relative z-50"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-base font-bold text-white mb-2 font-display uppercase tracking-wide">
+        <h3 className="text-base font-bold text-on-surface mb-2 font-display uppercase tracking-wide">
           {title}
         </h3>
         <div className="text-xs text-secondary leading-relaxed mb-6">

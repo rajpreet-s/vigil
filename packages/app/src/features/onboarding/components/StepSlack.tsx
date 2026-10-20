@@ -93,7 +93,7 @@ export const StepSlack: React.FC<StepSlackProps> = ({ onNext, onBack, status, is
               <MessageSquare className="w-3.5 h-3.5" />
               <span>Step 3 of 4 - Incident Broadcasting (Optional)</span>
             </div>
-            <h3 className="text-xl font-bold text-white font-display tracking-tight">
+            <h3 className="text-xl font-bold text-on-surface font-display tracking-tight">
               Slack Incoming Webhook
             </h3>
             <p className="text-xs text-secondary/80 mt-0.5">
@@ -132,7 +132,7 @@ export const StepSlack: React.FC<StepSlackProps> = ({ onNext, onBack, status, is
         {/* Webhook URL Input */}
         <div className="p-4 rounded-xl bg-surface-container-low/60 border border-surface-container-high/60 space-y-3">
           <div className="flex items-center justify-between">
-            <label className="block text-xs font-semibold text-white/90">
+            <label className="block text-xs font-semibold text-on-surface">
               Slack Incoming Webhook URL
             </label>
             <span className="text-[11px] text-secondary/70 font-mono">
@@ -155,7 +155,7 @@ export const StepSlack: React.FC<StepSlackProps> = ({ onNext, onBack, status, is
                   ? 'Configured by Organization Owner'
                   : 'https://hooks.slack.com/services/T000.../B000.../XXXXX'
               }
-              className={`w-full bg-[#0c0e13] border border-surface-container-high rounded-lg px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-primary transition-all ${
+              className={`w-full bg-surface-container-lowest border border-surface-container-high rounded-lg px-3.5 py-2.5 text-xs text-on-surface font-mono focus:outline-none focus:border-primary transition-all ${
                 !isOwner ? 'opacity-60 cursor-not-allowed' : ''
               }`}
             />
@@ -166,9 +166,9 @@ export const StepSlack: React.FC<StepSlackProps> = ({ onNext, onBack, status, is
         </div>
 
         {/* Verification Test Card */}
-        <div className="p-3.5 rounded-xl bg-[#0c0e13] border border-surface-container-high flex items-center justify-between">
+        <div className="p-3.5 rounded-xl bg-surface-container border border-surface-container-high flex items-center justify-between">
           <div>
-            <div className="text-xs font-semibold text-white">Connection Verification</div>
+            <div className="text-xs font-semibold text-on-surface">Connection Verification</div>
             <div className="text-[11px] text-secondary/70">
               Sends a test alert message to your Slack webhook URL.
             </div>
@@ -210,7 +210,7 @@ export const StepSlack: React.FC<StepSlackProps> = ({ onNext, onBack, status, is
               <span>{testResult.message}</span>
             </div>
             {testResult.detail && (
-              <div className="text-[11px] text-slate-300 bg-[#0c0e13]/60 p-2 rounded border border-red-500/20">
+              <div className="text-[11px] text-on-surface bg-surface-container-lowest p-2 rounded border border-red-500/20">
                 {testResult.detail}
               </div>
             )}
@@ -219,7 +219,7 @@ export const StepSlack: React.FC<StepSlackProps> = ({ onNext, onBack, status, is
       </div>
 
       {/* Sticky Bottom Navigation Footer */}
-      <div className="sticky bottom-0 bg-[#111318]/95 backdrop-blur-md pt-4 pb-1 border-t border-surface-container-high/60 z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="sticky bottom-0 bg-surface-container/95 backdrop-blur-md pt-4 pb-1 border-t border-surface-container-high/60 z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
         <button
           type="button"
           onClick={onBack}
@@ -233,7 +233,7 @@ export const StepSlack: React.FC<StepSlackProps> = ({ onNext, onBack, status, is
           <button
             type="button"
             onClick={handleSkip}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-xs font-semibold text-secondary hover:text-white border border-surface-container-highest transition-all flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-xs font-semibold text-secondary hover:text-on-surface border border-surface-container-highest transition-all flex items-center justify-center gap-1.5"
           >
             <SkipForward className="w-3.5 h-3.5" />
             <span>Skip Slack for Now</span>

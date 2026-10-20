@@ -22,6 +22,7 @@ interface AgentTraceDagProps {
     isResizing?: boolean;
     isCollapsed?: boolean;
     onToggleCollapse?: () => void;
+    className?: string;
 }
 
 export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
@@ -29,6 +30,7 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
     isResizing,
     isCollapsed = false,
     onToggleCollapse,
+    className = '',
 }) => {
     const {
         selectedIncident,
@@ -63,12 +65,12 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
     // Render Collapsed Strip (56px width)
     if (isCollapsed) {
         return (
-            <aside className="dag-col h-full w-[56px] bg-[#0d0f14]/95 backdrop-blur-xl border-l border-surface-container-high/60 flex flex-col items-center justify-between py-3 z-20 select-none">
+            <aside className="dag-col h-full w-[56px] bg-surface-container-low/95 backdrop-blur-xl border-l border-surface-container-high/60 flex flex-col items-center justify-between py-3 z-20 select-none">
                 {/* Header Expand Button */}
                 <button
                     onClick={onToggleCollapse}
                     title="Expand Agent Trace"
-                    className="p-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-primary hover:text-white transition-all border border-surface-container-highest flex items-center justify-center shadow-md"
+                    className="p-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-primary hover:text-on-surface transition-all border border-surface-container-highest flex items-center justify-center shadow-md"
                 >
                     <PanelRightOpen className="w-4 h-4" />
                 </button>
@@ -82,9 +84,9 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
                         const isCurrentActive = activeNode === step.id;
                         const StepIcon = step.icon;
 
-                        let style = 'bg-[#111318] text-secondary/70 border-surface-container-high/80';
+                        let style = 'bg-surface-container text-secondary border-surface-container-high/80';
                         if (status === 'completed') {
-                            style = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+                            style = 'bg-emerald-500/20 text-emerald-500 border-emerald-500/40';
                         } else if (status === 'suspended' || isCurrentActive) {
                             style = 'bg-primary text-on-primary border-primary shadow-lg shadow-primary/30 animate-pulse';
                         } else if (status === 'executing') {
@@ -108,13 +110,13 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
                 </div>
 
                 {/* Bottom Status Dot */}
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" title="Agent Pipeline Active" />
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" title="Agent Pipeline Active" />
             </aside>
         );
     }
 
     return (
-        <aside className="dag-col h-full bg-[#0d0f14]/90 backdrop-blur-xl border-l border-surface-container-high/60 overflow-hidden flex flex-col relative select-none">
+        <aside className={`dag-col h-full bg-surface-container-low/90 backdrop-blur-xl border-l border-surface-container-high/60 overflow-hidden flex flex-col relative select-none ${className}`}>
             {/* Resizing Handle on the left border */}
             {activeNode && onDragStart && (
                 <div
@@ -127,10 +129,10 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
             )}
 
             {/* Header Banner */}
-            <div className="p-3.5 border-b border-surface-container-high/50 flex items-center justify-between flex-shrink-0 bg-[#111318]/90">
+            <div className="p-3.5 border-b border-surface-container-high/50 flex items-center justify-between flex-shrink-0 bg-surface-container/90">
                 <div className="flex items-center gap-2">
                     <Activity className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">
+                    <span className="text-xs font-bold text-on-surface uppercase tracking-wider font-mono">
                         Agent Trace Pipeline
                     </span>
                 </div>
@@ -138,18 +140,20 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
                 <div className="flex items-center gap-1.5">
                     <button
                         onClick={() => setShowAccessibleDAG(!showAccessibleDAG)}
-                        className="text-[10px] font-mono bg-surface-container-high hover:bg-surface-container-highest px-2 py-1 rounded-lg border border-surface-container-highest text-secondary hover:text-white transition-all"
+                        className="text-[10px] font-mono bg-surface-container-high hover:bg-surface-container-highest px-2 py-1 rounded-lg border border-surface-container-highest text-secondary hover:text-on-surface transition-all"
                     >
                         {showAccessibleDAG ? '⛶ Graph' : '▤ Table'}
                     </button>
 
-                    <button
-                        onClick={onToggleCollapse}
-                        title="Minimize Agent Trace"
-                        className="p-1 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-secondary hover:text-white transition-all border border-surface-container-highest"
-                    >
-                        <PanelRightClose className="w-3.5 h-3.5" />
-                    </button>
+                    {onToggleCollapse && (
+                        <button
+                            onClick={onToggleCollapse}
+                            title="Minimize Agent Trace"
+                            className="p-1 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-secondary hover:text-on-surface transition-all border border-surface-container-highest"
+                        >
+                            <PanelRightClose className="w-3.5 h-3.5" />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -167,31 +171,31 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
                         const isCurrentActive = activeNode === step.id;
                         const StepIcon = step.icon;
 
-                        let borderStyle = 'border-surface-container-high/60 bg-[#111318]/80 text-secondary/80';
+                        let borderStyle = 'border-surface-container-high/60 bg-surface-container/80 text-secondary';
                         let iconBoxStyle = 'bg-surface-container-high text-secondary border border-surface-container-highest';
                         let statusBadge = null;
 
                         if (status === 'completed') {
-                            borderStyle = 'border-emerald-500/30 bg-emerald-500/5 text-white';
-                            iconBoxStyle = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+                            borderStyle = 'border-emerald-500/30 bg-emerald-500/5 text-on-surface';
+                            iconBoxStyle = 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30';
                             statusBadge = (
-                                <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1 font-bold">
+                                <span className="text-[10px] font-mono text-emerald-500 flex items-center gap-1 font-bold">
                                     <CheckCircle2 className="w-3 h-3" /> OK
                                 </span>
                             );
                         } else if (status === 'suspended' || isCurrentActive) {
-                            borderStyle = 'border-primary/50 bg-primary/10 text-white shadow-lg shadow-primary/10';
+                            borderStyle = 'border-primary/50 bg-primary/10 text-on-surface shadow-lg shadow-primary/10';
                             iconBoxStyle = 'bg-primary text-on-primary font-bold';
                             statusBadge = (
-                                <span className="text-[10px] font-mono text-amber-400 font-bold flex items-center gap-1 animate-pulse">
+                                <span className="text-[10px] font-mono text-amber-500 font-bold flex items-center gap-1 animate-pulse">
                                     <Clock className="w-3 h-3" /> CHECKPOINT
                                 </span>
                             );
                         } else if (status === 'executing') {
-                            borderStyle = 'border-amber-500/50 bg-amber-500/10 text-white shadow-lg shadow-amber-500/10';
+                            borderStyle = 'border-amber-500/50 bg-amber-500/10 text-on-surface shadow-lg shadow-amber-500/10';
                             iconBoxStyle = 'bg-amber-500 text-black font-bold';
                             statusBadge = (
-                                <span className="text-[10px] font-mono text-amber-400 font-bold flex items-center gap-1 animate-spin">
+                                <span className="text-[10px] font-mono text-amber-500 font-bold flex items-center gap-1 animate-spin">
                                     <Activity className="w-3 h-3" /> EXECUTING
                                 </span>
                             );
@@ -214,13 +218,13 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
                                     <div className="flex items-center justify-between gap-2">
                                         <div className="flex items-center gap-1.5">
                                             <span className="text-[10px] font-mono text-primary font-bold">0{idx + 1}</span>
-                                            <span className="text-xs font-bold font-mono tracking-tight text-white uppercase">
+                                            <span className="text-xs font-bold font-mono tracking-tight text-on-surface uppercase">
                                                 {step.label}
                                             </span>
                                         </div>
                                         {statusBadge}
                                     </div>
-                                    <p className="text-[10px] text-secondary/70 truncate mt-0.5">{step.desc}</p>
+                                    <p className="text-[10px] text-secondary truncate mt-0.5">{step.desc}</p>
                                 </div>
                             </div>
                         );
@@ -230,7 +234,7 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
 
             {/* Audit Inspector Panel */}
             {activeNode && !showAccessibleDAG && (
-                <div className="border-t border-surface-container-high/60 flex flex-col max-h-[52%] overflow-y-auto bg-[#111318]/95 backdrop-blur-2xl shadow-2xl p-4 animate-fadeIn">
+                <div className="border-t border-surface-container-high/60 flex flex-col max-h-[52%] overflow-y-auto bg-surface-container/95 backdrop-blur-2xl shadow-2xl p-4 animate-fadeIn">
                     <div className="flex items-center justify-between pb-2 mb-3 border-b border-surface-container-high/50">
                         <div className="flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
@@ -240,7 +244,7 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
                         </div>
                         <button
                             onClick={() => setActiveNode(null)}
-                            className="p-1 text-secondary/60 hover:text-white rounded-lg hover:bg-surface-container-high transition-all"
+                            className="p-1 text-secondary hover:text-on-surface rounded-lg hover:bg-surface-container-high transition-all"
                             title="Close Inspector"
                         >
                             <X className="w-4 h-4" />
