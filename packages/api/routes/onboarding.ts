@@ -55,7 +55,8 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
         '/onboarding/status',
         {
             schema: {
-                description: 'Returns configuration status of Gemini, Slack, Webhooks, Topology, and Runbooks.',
+                description:
+                    'Returns configuration status of Gemini, Slack, Webhooks, Topology, and Runbooks.',
                 tags: ['Onboarding'],
             },
         },
@@ -71,7 +72,8 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
 
                 // Read Gemini & Slack settings from database (org-level), fallback to env
                 const geminiKey = org?.gemini_api_key || process.env.GEMINI_API_KEY || null;
-                const geminiModel = org?.gemini_model || process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+                const geminiModel =
+                    org?.gemini_model || process.env.GEMINI_MODEL || 'gemini-3.8-flash';
                 const webhookUrl = org?.slack_webhook_url || process.env.SLACK_WEBHOOK_URL || null;
 
                 const hasGemini = !!geminiKey && geminiKey.trim().length > 0;
@@ -83,9 +85,13 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                 // Setup is considered complete if Gemini is configured (or verified) and Topology has at least 1 edge
                 const isComplete = (hasGemini || hasSlack) && hasTopology;
 
-                const maskedWebhook = hasSlack && webhookUrl
-                    ? webhookUrl.replace(/(https:\/\/hooks\.slack\.com\/services\/[^\/]+\/[^\/]+\/).+/, '$1********')
-                    : null;
+                const maskedWebhook =
+                    hasSlack && webhookUrl
+                        ? webhookUrl.replace(
+                              /(https:\/\/hooks\.slack\.com\/services\/[^\/]+\/[^\/]+\/).+/,
+                              '$1********'
+                          )
+                        : null;
 
                 const orgApiKey = org?.api_key || null;
                 const webhookEndpoint = orgApiKey
@@ -104,17 +110,21 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                         gemini: {
                             configured: hasGemini,
                             model: geminiModel,
-                            keyPreview: isOwner ? (hasGemini ? `${geminiKey!.slice(0, 8)}...` : null) : null,
-                            apiKey: isOwner ? (geminiKey || '') : null,
+                            keyPreview: isOwner
+                                ? hasGemini
+                                    ? `${geminiKey!.slice(0, 8)}...`
+                                    : null
+                                : null,
+                            apiKey: isOwner ? geminiKey || '' : null,
                         },
                         slack: {
                             configured: hasSlack,
-                            webhookUrl: isOwner ? (webhookUrl || null) : maskedWebhook,
+                            webhookUrl: isOwner ? webhookUrl || null : maskedWebhook,
                         },
-                        prometheus: { 
-                            configured: hasWebhooks, 
-                            endpoint: webhookEndpoint, 
-                            anomalyCount 
+                        prometheus: {
+                            configured: hasWebhooks,
+                            endpoint: webhookEndpoint,
+                            anomalyCount,
                         },
                         topology: { configured: hasTopology, edgeCount: topologyCount },
                         runbooks: { configured: hasRunbooks, documentCount: runbooksCount },
@@ -133,7 +143,8 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
         '/onboarding/validate-gemini',
         {
             schema: {
-                description: 'Validates Google Gemini API key by making a live lightweight prompt call and persists to org.',
+                description:
+                    'Validates Google Gemini API key by making a live lightweight prompt call and persists to org.',
                 tags: ['Onboarding'],
                 body: {
                     type: 'object',
@@ -155,10 +166,14 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
             }
 
             const body = (request.body as any) || {};
-            const key = (body.apiKey && body.apiKey.trim()) || org?.gemini_api_key || process.env.GEMINI_API_KEY;
-            let model = body.model || org?.gemini_model || process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+            const key =
+                (body.apiKey && body.apiKey.trim()) ||
+                org?.gemini_api_key ||
+                process.env.GEMINI_API_KEY;
+            let model =
+                body.model || org?.gemini_model || process.env.GEMINI_MODEL || 'gemini-3.8-flash';
             if (model === 'gemini-2.5-flash' || model === 'gemini-2.5-pro') {
-                model = 'gemini-3.6-flash';
+                model = 'gemini-3.8-flash';
             }
 
             if (!key) {
@@ -185,19 +200,22 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
             try {
                 let { res, latencyMs } = await attemptValidation(model);
 
-                // If target model failed and wasn't gemini-3.6-flash, fallback to gemini-3.6-flash
-                if (!res.ok && model !== 'gemini-3.6-flash') {
-                    const fallback = await attemptValidation('gemini-3.6-flash');
+                // If target model failed and wasn't gemini-3.8-flash, fallback to gemini-3.8-flash
+                if (!res.ok && model !== 'gemini-3.8-flash') {
+                    const fallback = await attemptValidation('gemini-3.8-flash');
                     if (fallback.res.ok) {
                         res = fallback.res;
                         latencyMs = fallback.latencyMs;
-                        model = 'gemini-3.6-flash';
+                        model = 'gemini-3.8-flash';
                     }
                 }
 
                 if (!res.ok) {
                     const errJson = await res.json().catch(() => ({}));
-                    const errMsg = (errJson as any)?.error?.message || res.statusText || 'Invalid API key or model';
+                    const errMsg =
+                        (errJson as any)?.error?.message ||
+                        res.statusText ||
+                        'Invalid API key or model';
                     return reply.status(400).send({
                         success: false,
                         error: `Gemini API validation failed: ${errMsg}`,
@@ -261,7 +279,10 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
             }
 
             const body = (request.body as any) || {};
-            const webhookUrl = (body.webhookUrl && body.webhookUrl.trim()) || org?.slack_webhook_url || process.env.SLACK_WEBHOOK_URL;
+            const webhookUrl =
+                (body.webhookUrl && body.webhookUrl.trim()) ||
+                org?.slack_webhook_url ||
+                process.env.SLACK_WEBHOOK_URL;
 
             if (!webhookUrl || !webhookUrl.startsWith('https://hooks.slack.com/')) {
                 return reply.status(400).send({
@@ -294,7 +315,8 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                     process.env.SLACK_WEBHOOK_URL = webhookUrl;
                     return reply.send({
                         success: true,
-                        message: 'Connected to Slack webhook successfully. Test alert sent and saved to organization.',
+                        message:
+                            'Connected to Slack webhook successfully. Test alert sent and saved to organization.',
                     });
                 } else {
                     const errText = await res.text();
@@ -348,7 +370,9 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
             });
         } catch (err: any) {
             fastify.log.error(err, 'Failed to simulate alert');
-            return reply.status(500).send({ success: false, error: err.message || 'Failed to simulate alert' });
+            return reply
+                .status(500)
+                .send({ success: false, error: err.message || 'Failed to simulate alert' });
         }
     };
 
@@ -427,18 +451,28 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                     });
                 }
 
-                const { edges } = request.body as { edges: Array<{ upstream: string; downstream: string; description?: string }> };
+                const { edges } = request.body as {
+                    edges: Array<{ upstream: string; downstream: string; description?: string }>;
+                };
 
                 const created = [];
                 for (const edge of edges) {
                     await fastify.prisma.service.upsert({
                         where: { name: edge.upstream },
-                        create: { name: edge.upstream, display_name: edge.upstream, org_id: org?.id || null },
+                        create: {
+                            name: edge.upstream,
+                            display_name: edge.upstream,
+                            org_id: org?.id || null,
+                        },
                         update: {},
                     });
                     await fastify.prisma.service.upsert({
                         where: { name: edge.downstream },
-                        create: { name: edge.downstream, display_name: edge.downstream, org_id: org?.id || null },
+                        create: {
+                            name: edge.downstream,
+                            display_name: edge.downstream,
+                            org_id: org?.id || null,
+                        },
                         update: {},
                     });
 
@@ -513,7 +547,10 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                     });
                 }
 
-                const { upstream, downstream } = request.body as { upstream: string; downstream: string };
+                const { upstream, downstream } = request.body as {
+                    upstream: string;
+                    downstream: string;
+                };
 
                 await fastify.prisma.topology.deleteMany({
                     where: {
@@ -625,25 +662,65 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                 }
 
                 const presetEdges = [
-                    { upstream: 'api-gateway', downstream: 'auth-service', description: 'User authentication & JWT validation' },
-                    { upstream: 'api-gateway', downstream: 'order-service', description: 'Order placement & checkout traffic' },
-                    { upstream: 'api-gateway', downstream: 'payment-service', description: 'Transaction and billing requests' },
-                    { upstream: 'order-service', downstream: 'payment-service', description: 'Synchronous payment authorization RPC' },
-                    { upstream: 'auth-service', downstream: 'postgres-db', description: 'User accounts & credentials storage' },
-                    { upstream: 'order-service', downstream: 'postgres-db', description: 'Order records & ledger persistence' },
-                    { upstream: 'payment-service', downstream: 'stripe-gateway', description: 'Outbound third-party payment processing' },
-                    { upstream: 'api-gateway', downstream: 'redis-cache', description: 'Rate-limiting & session cache' },
+                    {
+                        upstream: 'api-gateway',
+                        downstream: 'auth-service',
+                        description: 'User authentication & JWT validation',
+                    },
+                    {
+                        upstream: 'api-gateway',
+                        downstream: 'order-service',
+                        description: 'Order placement & checkout traffic',
+                    },
+                    {
+                        upstream: 'api-gateway',
+                        downstream: 'payment-service',
+                        description: 'Transaction and billing requests',
+                    },
+                    {
+                        upstream: 'order-service',
+                        downstream: 'payment-service',
+                        description: 'Synchronous payment authorization RPC',
+                    },
+                    {
+                        upstream: 'auth-service',
+                        downstream: 'postgres-db',
+                        description: 'User accounts & credentials storage',
+                    },
+                    {
+                        upstream: 'order-service',
+                        downstream: 'postgres-db',
+                        description: 'Order records & ledger persistence',
+                    },
+                    {
+                        upstream: 'payment-service',
+                        downstream: 'stripe-gateway',
+                        description: 'Outbound third-party payment processing',
+                    },
+                    {
+                        upstream: 'api-gateway',
+                        downstream: 'redis-cache',
+                        description: 'Rate-limiting & session cache',
+                    },
                 ];
 
                 for (const edge of presetEdges) {
                     await fastify.prisma.service.upsert({
                         where: { name: edge.upstream },
-                        create: { name: edge.upstream, display_name: edge.upstream, org_id: org?.id || null },
+                        create: {
+                            name: edge.upstream,
+                            display_name: edge.upstream,
+                            org_id: org?.id || null,
+                        },
                         update: {},
                     });
                     await fastify.prisma.service.upsert({
                         where: { name: edge.downstream },
-                        create: { name: edge.downstream, display_name: edge.downstream, org_id: org?.id || null },
+                        create: {
+                            name: edge.downstream,
+                            display_name: edge.downstream,
+                            org_id: org?.id || null,
+                        },
                         update: {},
                     });
 

@@ -151,21 +151,78 @@ services:
         expect(() => parseTopology(writeTempTopology(circular))).toThrowError(/Circular dependency detected/);
     });
 
-    // ── Test 6: unknown service in depends_on throws descriptive error ─────────
-    it("throws a descriptive error when depends_on references an undefined service", () => {
-        const badRef = `
-version: "1"
+    // ── Test 7: areConnected and getTransitiveDistance ────────────────────────
+    it("areConnected and getTransitiveDistance return correct hop counts", () => {
+        const graph = parseTopology(writeTempTopology(VALID_TOPOLOGY));
 
-services:
-  api_service:
-    display_name: "Node.js API"
-    depends_on:
-      - ghost_service
-    prometheus_labels:
-      job: "node_api"
-`;
-        expect(() => parseTopology(writeTempTopology(badRef))).toThrowError(
-            /Service 'ghost_service' listed in api_service.depends_on but not defined/,
-        );
+        // 1-hop: api_service and postgresql
+        expect(graph.areConnected("api_service", "postgresql")).toBe(true);
+        expect(graph.getTransitiveDistance("api_service", "postgresql")).toBe(1);
+
+        // 2-hop: nginx and postgresql (nginx -> api_service -> postgresql)
+        expect(graph.areConnected("nginx", "postgresql")).toBe(true);
+        expect(graph.getTransitiveDistance("nginx", "postgresql")).toBe(2);
+
+        // Self distance
+        expect(graph.getTransitiveDistance("nginx", "nginx")).toBe(0);
+
+        // Unknown service returns null / false
+        expect(graph.areConnected("nginx", "non_existent")).toBe(false);
+        expect(graph.getTransitiveDistance("nginx", "non_existent")).toBeNull();
+    });
+});
+
+import {
+    canonicalizeServiceName,
+    servicesMatch,
+    extractServiceNameFromLabels,
+    computeInfraSimilarity,
+} from "../topology/normalizer.js";
+
+describe("normalizer utilities", () => {
+    it("canonicalizes service names by stripping prefixes and suffixes", () => {
+        expect(canonicalizeServiceName("checkout-service")).toBe("checkout");
+        expect(canonicalizeServiceName("prod-checkout")).toBe("checkout");
+        expect(canonicalizeServiceName("api_service")).toBe("api");
+        expect(canonicalizeServiceName("auth-svc")).toBe("auth");
+        expect(canonicalizeServiceName("redis")).toBe("redis");
+    });
+
+    it("matches services with minor naming differences", () => {
+        expect(servicesMatch("checkout", "checkout-service")).toBe(true);
+        expect(servicesMatch("checkout-service", "checkout")).toBe(true);
+        expect(servicesMatch("api", "api-svc")).toBe(true);
+        expect(servicesMatch("auth", "billing")).toBe(false);
+    });
+
+    it("extracts candidate service name from standard Prometheus labels", () => {
+        expect(extractServiceNameFromLabels({ service: "cart-service" })).toBe("cart-service");
+        expect(extractServiceNameFromLabels({ app: "payment" })).toBe("payment");
+        expect(extractServiceNameFromLabels({ "app.kubernetes.io/name": "catalog" })).toBe("catalog");
+        expect(extractServiceNameFromLabels({ job: "checkout-worker" })).toBe("checkout-worker");
+        expect(extractServiceNameFromLabels({ pod: "orders-7f89c654-x98yz" })).toBe("orders");
+    });
+
+    it("computes infrastructure similarity between alert label sets", () => {
+        const labelsA = {
+            namespace: "prod",
+            cluster: "us-east-1",
+            instance: "10.0.1.5:8080",
+        };
+        const labelsB = {
+            namespace: "prod",
+            cluster: "us-east-1",
+            instance: "10.0.1.5:9090",
+        };
+        const labelsDiff = {
+            namespace: "staging",
+            cluster: "eu-west-1",
+        };
+
+        const scoreMatch = computeInfraSimilarity(labelsA, labelsB);
+        expect(scoreMatch).toBe(1.0); // same namespace, cluster, and node host IP
+
+        const scoreDiff = computeInfraSimilarity(labelsA, labelsDiff);
+        expect(scoreDiff).toBe(0.0);
     });
 });

@@ -4,15 +4,20 @@ These are the non-obvious choices made while building Vigil, and the reasoning b
 
 ---
 
-## 1. Topology-aware correlation over naive time-window bucketing
+## 1. Multi-signal correlation over rigid 1-hop topology or naive time bucketing
 
-**Decision:** Group alerts by service dependency edges first. Fall back to temporal proximity only when no topology is defined.
+**Decision:** Group alerts by service dependency reachability first (transitive k-hop traversal up to 3 hops). When topology edges are missing or unmapped, fall back to shared infrastructure context (Kubernetes namespace, cluster, node) and temporal burst windows, rather than creating fragmented 1-alert incidents.
 
-**Why:** Time-window bucketing is the obvious starting point and it has a fundamental flaw. When an upstream service fails and cascades to three downstream services over 90 seconds, a narrow time window misses the later alerts and a wide window picks up unrelated noise. Neither is right. Temporal proximity is a proxy for causation. Dependency edges are the actual thing.
+**Why:** Real-world topologies configured by users often have missing edges, subtle naming variations (e.g. `checkout` vs `checkout-service`), or multi-hop cascades ($A \rightarrow B \rightarrow C$ where intermediate service $B$ never alerted).
+A rigid 1-hop check treated any missing edge as absolute proof of isolation, causing alert storms to fragment into multiple duplicate incidents. Furthermore, alerts arriving during `PROCESSING` or `PENDING_REVIEW` states must append to the active incident blast radius rather than opening duplicate root incidents.
 
-The `IncidentCoordinator` queries the `topology` table for a direct edge between the incoming service and any service already in an active incident. If the edge exists, they're in the same incident — regardless of how much time has passed (up to the hard max duration cap). If no edge exists, no grouping.
+The `IncidentCoordinator` uses a multi-signal scoring engine:
+- Direct 1-hop edge (score 1.0)
+- Transitive 2-hop / 3-hop dependency reachability (score 0.85 / 0.70)
+- Shared infrastructure context (namespace, cluster, node from Prometheus labels, score 0.60–0.90)
+- Simultaneous burst proximity (< 3 minutes during active incident)
 
-**Tradeoff:** This requires maintaining a topology definition. The fallback (temporal mode with `LOW` confidence) exists precisely for teams that haven't defined one yet, but the quality degrades noticeably — the causal timeline is a guess rather than a structural fact.
+**Tradeoff:** Allows alerts to join an incident even when user topology is partially defined or incomplete. The AI reasoning layer in `rca_node` then evaluates the refined causal timeline and blast radius.
 
 ---
 
@@ -40,15 +45,15 @@ The `investigate_node` is the exception — it does use a tool-calling loop. But
 
 ---
 
-## 4. Disconnected subgraph handling: drop isolated nodes, don't demote them
+## 4. Disconnected subgraph handling: transitive reachability preservation
 
-**Decision:** In `buildCausalTimeline`, services with no anomalous topology neighbors are silently dropped from the causal chain. They don't appear in the timeline the LLM sees.
+**Decision:** In `buildCausalTimeline`, anomalies connected by direct or transitive dependency paths (including multi-hop dependencies where intermediate services didn't alert) are retained in the causal timeline. Only services with zero topological or structural path to the rest of the incident are pruned.
 
-**Why:** The alternative is including them with a flag ("this service may not be related"). In practice, that flag gets ignored or averaged away by the LLM. A service that fired by coincidence and has no dependency path to the rest of the incident genuinely isn't part of the story. Including it adds noise without adding signal.
+**Why:** In cascading outages ($A \rightarrow B \rightarrow C$), intermediate service $B$ may be resilient or lack an alert rule. Dropping $A$ and $C$ because $B$ did not alert was a false negative. Transitive BFS traversal retains valid causal chains while dropping true coincidences.
 
-The dropped services are still in the incident (they were grouped at the `IncidentCoordinator` layer by temporal fallback), so they're not lost — they're just not part of the causal narrative the LLM reasons from.
+The dropped services remain in the incident database record (for blast radius visibility) but are kept out of the core causal narrative to maintain high signal for the LLM.
 
-The edge case: if the topology graph exists but *every* service in the incident ends up isolated (no anomalous neighbors for anyone), `buildCausalTimeline` returns an empty array. `pickRootCause` detects this and falls back to the earliest raw anomaly at `MEDIUM` confidence. The topology context exists but couldn't produce a connected chain — that's a different situation than having no topology at all.
+The edge case: if the topology graph exists but *every* service in the incident ends up isolated (no anomalous neighbors for anyone), `buildCausalTimeline` returns an empty array. `pickRootCause` detects this and falls back to the earliest raw anomaly at `MEDIUM` confidence.
 
 ---
 

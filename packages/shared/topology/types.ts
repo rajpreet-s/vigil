@@ -75,4 +75,17 @@ export interface TopologyGraph {
      * Example: findByPrometheusLabel("job", "node_api") → api_service node
      */
     findByPrometheusLabel(key: string, value: string): ServiceNode | null;
+
+    /**
+     * Checks if service `a` and `b` are connected in the graph within `maxHops`
+     * (either directed or undirected path).
+     */
+    areConnected(a: string, b: string, maxHops?: number): boolean;
+
+    /**
+     * Returns the shortest path distance (in hops) between `a` and `b` in the graph
+     * (considering undirected connections for blast radius or directed for causal chain).
+     * Returns null if not reachable within `maxHops`.
+     */
+    getTransitiveDistance(a: string, b: string, maxHops?: number): number | null;
 }

@@ -1,4 +1,5 @@
 import type { ServiceNode, TopologyGraph } from "./types.js";
+import { servicesMatch } from "./normalizer.js";
 
 // ─── Concrete graph implementation ───────────────────────────────────────────
 
@@ -73,6 +74,68 @@ export class TopologyGraphImpl implements TopologyGraph {
                 return node;
             }
         }
+        return null;
+    }
+
+    /**
+     * Resolves a service name or alias to the canonical service ID in the topology graph.
+     */
+    resolveServiceId(serviceName: string): string | null {
+        if (this.services.has(serviceName)) {
+            return serviceName;
+        }
+
+        // Fuzzy match using servicesMatch
+        for (const [id] of this.services) {
+            if (servicesMatch(id, serviceName)) {
+                return id;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Checks if service `a` and `b` are connected within maxHops (undirected or directed).
+     */
+    areConnected(a: string, b: string, maxHops = 3): boolean {
+        return this.getTransitiveDistance(a, b, maxHops) !== null;
+    }
+
+    /**
+     * Returns the shortest path distance in hops between `a` and `b`.
+     * Traverses both upstream and downstream edges to find structural affinity.
+     * Returns null if no path exists within maxHops.
+     */
+    getTransitiveDistance(a: string, b: string, maxHops = 3): number | null {
+        const sourceId = this.resolveServiceId(a);
+        const targetId = this.resolveServiceId(b);
+
+        if (!sourceId || !targetId) return null;
+        if (sourceId === targetId) return 0;
+
+        const visited = new Set<string>([sourceId]);
+        const queue: Array<{ id: string; dist: number }> = [{ id: sourceId, dist: 0 }];
+
+        while (queue.length > 0) {
+            const current = queue.shift()!;
+            if (current.dist >= maxHops) continue;
+
+            const neighbors = new Set<string>([
+                ...this.getUpstream(current.id),
+                ...this.getDownstream(current.id),
+            ]);
+
+            for (const neighbor of neighbors) {
+                if (neighbor === targetId) {
+                    return current.dist + 1;
+                }
+                if (!visited.has(neighbor)) {
+                    visited.add(neighbor);
+                    queue.push({ id: neighbor, dist: current.dist + 1 });
+                }
+            }
+        }
+
         return null;
     }
 }

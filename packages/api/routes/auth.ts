@@ -287,7 +287,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         '/auth/dev-login',
         {
             schema: {
-                description: 'Local development and demo login without external Google OAuth redirect dependencies.',
+                description:
+                    'Local development and demo login without external Google OAuth redirect dependencies.',
                 tags: ['Authentication'],
                 response: {
                     200: {
@@ -318,7 +319,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         },
         async (request, reply) => {
             // Production guardrail: Never allow quick sign-in in production environments
-            const isProduction = process.env.NODE_ENV === 'production' && process.env.ENABLE_DEV_LOGIN !== 'true';
+            const isProduction =
+                process.env.NODE_ENV === 'production' && process.env.ENABLE_DEV_LOGIN !== 'true';
             if (isProduction) {
                 return reply.status(403).send({
                     error: 'Developer quick sign-in is disabled in production environments.',
@@ -356,7 +358,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
                         api_key: `vgl_live_demo_${crypto.randomBytes(20).toString('hex')}`,
                         invite_code: `vigil_inv_demo_${crypto.randomBytes(6).toString('hex')}`,
                         gemini_api_key: process.env.GEMINI_API_KEY || null,
-                        gemini_model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
+                        gemini_model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
                         slack_webhook_url: process.env.SLACK_WEBHOOK_URL || null,
                     },
                 });
@@ -394,25 +396,65 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
             if (topologyCount === 0) {
                 const presetEdges = [
-                    { upstream: 'api-gateway', downstream: 'auth-service', description: 'User authentication & JWT validation' },
-                    { upstream: 'api-gateway', downstream: 'order-service', description: 'Order placement & checkout traffic' },
-                    { upstream: 'api-gateway', downstream: 'payment-service', description: 'Transaction and billing requests' },
-                    { upstream: 'order-service', downstream: 'payment-service', description: 'Synchronous payment authorization RPC' },
-                    { upstream: 'auth-service', downstream: 'postgres-db', description: 'User accounts & credentials storage' },
-                    { upstream: 'order-service', downstream: 'postgres-db', description: 'Order records & ledger persistence' },
-                    { upstream: 'payment-service', downstream: 'stripe-gateway', description: 'Outbound third-party payment processing' },
-                    { upstream: 'api-gateway', downstream: 'redis-cache', description: 'Rate-limiting & session cache' },
+                    {
+                        upstream: 'api-gateway',
+                        downstream: 'auth-service',
+                        description: 'User authentication & JWT validation',
+                    },
+                    {
+                        upstream: 'api-gateway',
+                        downstream: 'order-service',
+                        description: 'Order placement & checkout traffic',
+                    },
+                    {
+                        upstream: 'api-gateway',
+                        downstream: 'payment-service',
+                        description: 'Transaction and billing requests',
+                    },
+                    {
+                        upstream: 'order-service',
+                        downstream: 'payment-service',
+                        description: 'Synchronous payment authorization RPC',
+                    },
+                    {
+                        upstream: 'auth-service',
+                        downstream: 'postgres-db',
+                        description: 'User accounts & credentials storage',
+                    },
+                    {
+                        upstream: 'order-service',
+                        downstream: 'postgres-db',
+                        description: 'Order records & ledger persistence',
+                    },
+                    {
+                        upstream: 'payment-service',
+                        downstream: 'stripe-gateway',
+                        description: 'Outbound third-party payment processing',
+                    },
+                    {
+                        upstream: 'api-gateway',
+                        downstream: 'redis-cache',
+                        description: 'Rate-limiting & session cache',
+                    },
                 ];
 
                 for (const edge of presetEdges) {
                     await fastify.prisma.service.upsert({
                         where: { name: edge.upstream },
-                        create: { name: edge.upstream, display_name: edge.upstream, org_id: demoOrg.id },
+                        create: {
+                            name: edge.upstream,
+                            display_name: edge.upstream,
+                            org_id: demoOrg.id,
+                        },
                         update: { org_id: demoOrg.id },
                     });
                     await fastify.prisma.service.upsert({
                         where: { name: edge.downstream },
-                        create: { name: edge.downstream, display_name: edge.downstream, org_id: demoOrg.id },
+                        create: {
+                            name: edge.downstream,
+                            display_name: edge.downstream,
+                            org_id: demoOrg.id,
+                        },
                         update: { org_id: demoOrg.id },
                     });
                     await fastify.prisma.topology.upsert({
