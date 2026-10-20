@@ -8,6 +8,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/api/package.json packages/api/package-lock.json ./packages/api/
 COPY prisma/ ./prisma/
+COPY prisma.config.ts ./
 
 # Install root dependencies (including Prisma CLI required for generation)
 RUN npm ci
@@ -47,6 +48,7 @@ RUN addgroup -S vigil && adduser -S vigil -G vigil
 COPY --from=builder --chown=vigil:vigil /app/node_modules ./node_modules
 COPY --from=builder --chown=vigil:vigil /app/packages/api/node_modules ./packages/api/node_modules
 COPY --from=builder --chown=vigil:vigil /app/prisma ./prisma
+COPY --from=builder --chown=vigil:vigil /app/prisma.config.ts ./prisma.config.ts
 
 # Copy only the compiled API JavaScript files
 COPY --from=builder --chown=vigil:vigil /app/packages/api/dist ./packages/api/dist
