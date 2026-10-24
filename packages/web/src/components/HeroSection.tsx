@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
+import { ArrowRight, Terminal, Minimize2, GitBranch, Cpu, MessageSquareCheck, MessageSquare, BookOpen } from 'lucide-react';
 import posthog from 'posthog-js';
 
 type HeroTab = 'collapse' | 'graph' | 'dag' | 'slack';
 
-const TABS: { id: HeroTab; label: string; icon: string; iconColor: string }[] = [
-  { id: 'collapse', label: '1. 40 ➔ 1 Collapse', icon: 'compress', iconColor: 'text-primary-container' },
-  { id: 'graph', label: '2. Causal Path', icon: 'account_tree', iconColor: 'text-amber-500' },
-  { id: 'dag', label: '3. Agent Trace DAG', icon: 'psychology', iconColor: 'text-primary-container' },
-  { id: 'slack', label: '4. Slack Dispatch', icon: 'mark_chat_read', iconColor: 'text-sky-500' },
+const TABS: { id: HeroTab; label: string; icon: React.ComponentType<{ className?: string }>; iconColor: string }[] = [
+  { id: 'collapse', label: '1. 40 ➔ 1 Collapse', icon: Minimize2, iconColor: 'text-primary-container' },
+  { id: 'graph', label: '2. Causal Path', icon: GitBranch, iconColor: 'text-amber-500' },
+  { id: 'dag', label: '3. Agent Trace DAG', icon: Cpu, iconColor: 'text-primary-container' },
+  { id: 'slack', label: '4. Slack Dispatch', icon: MessageSquareCheck, iconColor: 'text-sky-500' },
 ];
 
 export default function HeroSection() {
@@ -97,7 +98,7 @@ export default function HeroSection() {
               className="bg-gradient-to-b from-[#F97316] to-[#D97706] text-white px-6 py-3 rounded-xl font-semibold text-sm hover:brightness-105 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_12px_rgba(234,88,12,0.25)] border border-[#C2410C]/80"
             >
               <span>Launch Incident Console</span>
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
             <a
               href="https://github.com/rajpreet-s/vigil"
@@ -106,7 +107,7 @@ export default function HeroSection() {
               onClick={handleGitHubClick}
               className="flex items-center justify-center gap-2 px-5 py-3 border border-black/10 dark:border-white/10 rounded-xl text-sm font-medium text-[#181b22] dark:text-[#ededf2] bg-white dark:bg-[#16181f] shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-[#fafafa] dark:hover:bg-[#1c1e26] transition-all active:scale-[0.98]"
             >
-              <span className="material-symbols-outlined text-[16px]">terminal</span>
+              <Terminal className="w-4 h-4" />
               <span>View on GitHub</span>
             </a>
           </div>
@@ -186,9 +187,7 @@ export default function HeroSection() {
                           : 'text-on-surface-variant hover:text-on-surface hover:bg-black/[0.02] dark:hover:bg-white/[0.03]'
                       }`}
                     >
-                      <span className={`material-symbols-outlined text-[14px] ${tab.iconColor}`}>
-                        {tab.icon}
-                      </span>
+                      <tab.icon className={`w-3.5 h-3.5 ${tab.iconColor}`} />
                       <span>{tab.label}</span>
                     </button>
                   );
@@ -242,9 +241,7 @@ export default function HeroSection() {
 
                         {/* Middle Collapse Vector (2 cols) */}
                         <div className="sm:col-span-2 flex flex-col items-center justify-center text-center py-1">
-                          <span className="material-symbols-outlined text-primary-container text-xl animate-pulse">
-                            arrow_forward
-                          </span>
+                          <ArrowRight className="w-5 h-5 text-primary-container animate-pulse" />
                           <span className="text-[9px] text-primary-container font-semibold mt-0.5">
                             BFS Path
                           </span>
@@ -274,7 +271,7 @@ export default function HeroSection() {
                     <div className="p-4 rounded-xl bg-white dark:bg-[#161820] border border-black/[0.06] dark:border-white/[0.08] shadow-sm space-y-2.5">
                       <div className="flex items-center justify-between pb-2 border-b border-black/[0.04] dark:border-white/[0.06] text-[11px]">
                         <span className="font-semibold text-sky-600 dark:text-sky-400 flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-sm">chat</span>
+                          <MessageSquare className="w-3.5 h-3.5" />
                           #incidents-production • Vigil Bot
                         </span>
                         <span className="text-on-surface-variant text-[10px]">Today at 14:02:26</span>
@@ -292,7 +289,7 @@ export default function HeroSection() {
 
                       <div className="p-2 rounded-lg bg-[#f8fafc] dark:bg-[#1c1e26] border border-black/[0.06] dark:border-white/[0.08] text-[10px] text-on-surface-variant flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-xs text-primary-container">menu_book</span>
+                          <BookOpen className="w-3 h-3 text-primary-container" />
                           <span>ChromaDB Runbook: <strong>postgres-pool-saturation.md</strong></span>
                         </span>
                         <span className="text-emerald-600 dark:text-emerald-400 font-bold">94% Confidence</span>
