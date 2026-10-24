@@ -7,6 +7,8 @@ import {
     Send,
     RefreshCw,
     AlertTriangle,
+    ChevronDown,
+    ChevronUp,
 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { parseRcaSummary } from '../utils/formatIncident';
@@ -21,6 +23,7 @@ export const SlackPublisher: React.FC = () => {
     } = useApp();
 
     const [isBroadcasting, setIsBroadcasting] = useState(false);
+    const [isPayloadExpanded, setIsPayloadExpanded] = useState(false);
 
     if (!selectedIncident) return null;
 
@@ -53,12 +56,26 @@ export const SlackPublisher: React.FC = () => {
                     </code>
                     . Postgres checkpointer state updated to resolved.
                 </p>
-                <div className="bg-surface-container-lowest border border-surface-container-high/60 rounded-xl p-3.5 text-[11px] font-mono text-on-surface leading-relaxed max-h-44 overflow-y-auto space-y-1.5 whitespace-pre-wrap">
-                    <div className="flex items-center gap-1.5 text-secondary pb-1 border-b border-surface-container-high/40 text-[9px] font-bold uppercase">
-                        <FileText className="w-3.5 h-3.5 text-primary" />
-                        <span>Sent Slack Payload</span>
-                    </div>
-                    <div>{draftRcaReport || parsed.formattedSlackMrkdwn}</div>
+
+                <div className="pt-0.5">
+                    <button
+                        type="button"
+                        onClick={() => setIsPayloadExpanded(!isPayloadExpanded)}
+                        className="inline-flex items-center gap-1.5 text-xs font-mono font-medium text-secondary hover:text-on-surface transition-colors py-1 px-2 -ml-2 rounded-lg hover:bg-surface-container-high/50"
+                    >
+                        <span>{isPayloadExpanded ? 'Hide raw Slack payload' : 'View raw Slack payload'}</span>
+                        {isPayloadExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    </button>
+
+                    {isPayloadExpanded && (
+                        <div className="mt-2.5 bg-surface-container-lowest border border-surface-container-high/60 rounded-xl p-3.5 text-[11px] font-mono text-on-surface leading-relaxed max-h-44 overflow-y-auto space-y-1.5 whitespace-pre-wrap animate-fadeIn">
+                            <div className="flex items-center gap-1.5 text-secondary pb-1 border-b border-surface-container-high/40 text-[9px] font-bold uppercase">
+                                <FileText className="w-3.5 h-3.5 text-primary" />
+                                <span>Sent Slack Payload</span>
+                            </div>
+                            <div>{draftRcaReport || parsed.formattedSlackMrkdwn}</div>
+                        </div>
+                    )}
                 </div>
             </div>
         );

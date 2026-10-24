@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Activity, Network, BookOpen, Cpu, Sliders, User, LogOut, ShieldCheck, Building2, ChevronDown, Check, Plus, UserPlus, Copy, X, Sun, Moon } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import VigilLogo from '../components/ui/VigilLogo';
 
 export const Sidebar: React.FC = () => {
+    const location = useLocation();
     const {
         activeIncidentsCount,
         user,
@@ -33,6 +34,33 @@ export const Sidebar: React.FC = () => {
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const isCompleted = localStorage.getItem('vigil_onboarding_completed') === 'true';
+
+    // Auto-close mobile drawer on route navigation
+    useEffect(() => {
+        setIsMobileDrawerOpen(false);
+    }, [location.pathname, setIsMobileDrawerOpen]);
+
+    // Auto-close mobile drawer if viewport expands to desktop breakpoint (>= 1024px)
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth >= 1024) {
+                setIsMobileDrawerOpen(false);
+            }
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [setIsMobileDrawerOpen]);
+
+    // Close mobile drawer on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isMobileDrawerOpen) {
+                setIsMobileDrawerOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isMobileDrawerOpen, setIsMobileDrawerOpen]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -387,22 +415,31 @@ export const Sidebar: React.FC = () => {
                 {renderSidebarContent(false)}
             </aside>
 
-            {/* Mobile Slide-Over Drawer */}
-            {isMobileDrawerOpen && (
-                <div className="fixed inset-0 z-50 lg:hidden flex">
-                    {/* Backdrop */}
-                    <div 
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-                        onClick={() => setIsMobileDrawerOpen(false)}
-                        aria-hidden="true"
-                    />
+            {/* Mobile Slide-Over Drawer with smooth CSS transitions */}
+            <div 
+                className={`fixed inset-0 z-50 lg:hidden flex transition-all duration-300 ${
+                    isMobileDrawerOpen ? 'pointer-events-auto visible' : 'pointer-events-none invisible'
+                }`}
+                aria-hidden={!isMobileDrawerOpen}
+            >
+                {/* Backdrop with smooth opacity fade */}
+                <div 
+                    className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${
+                        isMobileDrawerOpen ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    onClick={() => setIsMobileDrawerOpen(false)}
+                    aria-hidden="true"
+                />
 
-                    {/* Drawer Panel */}
-                    <aside className="relative w-72 max-w-[85vw] h-full bg-surface border-r border-surface-container-high flex flex-col justify-between z-10 shadow-2xl animate-slideRight">
-                        {renderSidebarContent(true)}
-                    </aside>
-                </div>
-            )}
+                {/* Drawer Panel with smooth horizontal slide-in / slide-out */}
+                <aside 
+                    className={`relative w-72 max-w-[85vw] h-full bg-surface border-r border-surface-container-high flex flex-col justify-between z-10 shadow-2xl transition-transform duration-300 ease-out transform ${
+                        isMobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'
+                    }`}
+                >
+                    {renderSidebarContent(true)}
+                </aside>
+            </div>
 
             {/* Modal: Create Organization */}
             {showCreateModal && (

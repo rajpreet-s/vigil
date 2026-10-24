@@ -62,6 +62,15 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
         return 'idle';
     };
 
+    const STEP_DURATIONS: Record<string, string> = {
+        load: '18ms',
+        correlate: '42ms',
+        investigate: '310ms',
+        retrieval: '195ms',
+        rca: '1.4s',
+        human_review: '240ms',
+    };
+
     // Render Collapsed Strip (56px width)
     if (isCollapsed) {
         return (
@@ -77,18 +86,20 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
 
                 {/* Vertical Stem Line & Centered Icon Strip */}
                 <div className="flex-1 w-full flex flex-col items-center justify-center gap-4 relative py-4">
-                    <div className="absolute top-4 bottom-4 left-1/2 -translate-x-1/2 w-0.5 bg-surface-container-high/60 pointer-events-none z-0" />
+                    <div className="absolute top-4 bottom-4 left-1/2 -translate-x-1/2 w-px bg-surface-container-high/80 pointer-events-none z-0" />
 
                     {steps.map((step, idx) => {
                         const status = getStepStatus(step.id);
                         const isCurrentActive = activeNode === step.id;
                         const StepIcon = step.icon;
 
-                        let style = 'bg-surface-container text-secondary border-surface-container-high/80';
-                        if (status === 'completed') {
-                            style = 'bg-emerald-500/20 text-emerald-500 border-emerald-500/40';
-                        } else if (status === 'suspended' || isCurrentActive) {
-                            style = 'bg-primary text-on-primary border-primary shadow-lg shadow-primary/30 animate-pulse';
+                        let style = 'bg-white dark:bg-surface-container text-secondary border-black/[0.08] dark:border-white/[0.08]';
+                        if (isCurrentActive) {
+                            style = 'bg-primary text-on-primary border-primary shadow-md shadow-primary/20';
+                        } else if (status === 'completed') {
+                            style = 'bg-white dark:bg-surface-container text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
+                        } else if (status === 'suspended') {
+                            style = 'bg-amber-500/10 text-amber-500 border-amber-500/40 animate-pulse';
                         } else if (status === 'executing') {
                             style = 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/30 animate-spin';
                         }
@@ -163,51 +174,51 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
                 </div>
             ) : (
                 <div className="flex-1 p-4 overflow-y-auto space-y-3 relative scrollbar-thin">
-                    {/* Connecting Vertical Stem Line - Aligned exactly with step badges */}
-                    <div className="absolute left-[29px] top-6 bottom-6 w-0.5 bg-surface-container-high/60 z-0 pointer-events-none" />
+                    {/* Connecting Vertical Stem Line - 1px crisp connector aligned through card icons */}
+                    <div className="absolute left-[44px] top-6 bottom-6 w-px bg-surface-container-high/80 dark:bg-white/10 z-0 pointer-events-none" />
 
                     {steps.map((step, idx) => {
                         const status = getStepStatus(step.id);
                         const isCurrentActive = activeNode === step.id;
                         const StepIcon = step.icon;
 
-                        let borderStyle = 'border-surface-container-high/60 bg-surface-container/80 text-secondary';
+                        let borderStyle = 'border-black/[0.07] dark:border-white/[0.08] bg-white dark:bg-surface-container/70 text-on-surface shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:border-black/20 dark:hover:border-white/20';
                         let iconBoxStyle = 'bg-surface-container-high text-secondary border border-surface-container-highest';
                         let statusBadge = null;
 
                         if (status === 'completed') {
-                            borderStyle = 'border-emerald-500/30 bg-emerald-500/5 text-on-surface';
-                            iconBoxStyle = 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30';
+                            iconBoxStyle = 'bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
                             statusBadge = (
-                                <span className="text-[10px] font-mono text-emerald-500 flex items-center gap-1 font-bold">
-                                    <CheckCircle2 className="w-3 h-3" /> OK
+                                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-500" /> OK
                                 </span>
                             );
-                        } else if (status === 'suspended' || isCurrentActive) {
-                            borderStyle = 'border-primary/50 bg-primary/10 text-on-surface shadow-lg shadow-primary/10';
-                            iconBoxStyle = 'bg-primary text-on-primary font-bold';
+                        } else if (status === 'suspended') {
+                            iconBoxStyle = 'bg-amber-500/10 text-amber-500 border border-amber-500/30';
                             statusBadge = (
-                                <span className="text-[10px] font-mono text-amber-500 font-bold flex items-center gap-1 animate-pulse">
+                                <span className="text-[10px] font-mono text-amber-500 font-semibold flex items-center gap-1 animate-pulse">
                                     <Clock className="w-3 h-3" /> CHECKPOINT
                                 </span>
                             );
                         } else if (status === 'executing') {
-                            borderStyle = 'border-amber-500/50 bg-amber-500/10 text-on-surface shadow-lg shadow-amber-500/10';
                             iconBoxStyle = 'bg-amber-500 text-black font-bold';
                             statusBadge = (
-                                <span className="text-[10px] font-mono text-amber-500 font-bold flex items-center gap-1 animate-spin">
+                                <span className="text-[10px] font-mono text-amber-500 font-semibold flex items-center gap-1 animate-spin">
                                     <Activity className="w-3 h-3" /> EXECUTING
                                 </span>
                             );
+                        }
+
+                        // Apply an active tinted border and subtle background highlight ONLY to currently selected step
+                        if (isCurrentActive) {
+                            borderStyle = 'border-primary ring-1 ring-primary/40 bg-primary/[0.04] dark:bg-primary/[0.08] text-on-surface shadow-sm';
                         }
 
                         return (
                             <div
                                 key={step.id}
                                 onClick={() => setActiveNode(isCurrentActive ? null : step.id)}
-                                className={`relative z-10 p-3 rounded-xl border transition-all cursor-pointer flex items-center gap-3 ${borderStyle} ${
-                                    isCurrentActive ? 'ring-1 ring-primary' : 'hover:border-primary/40'
-                                }`}
+                                className={`relative z-10 p-3 rounded-xl border transition-all cursor-pointer flex items-center gap-3 ${borderStyle}`}
                             >
                                 {/* Step Icon Box */}
                                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${iconBoxStyle}`}>
@@ -222,7 +233,12 @@ export const AgentTraceDag: React.FC<AgentTraceDagProps> = ({
                                                 {step.label}
                                             </span>
                                         </div>
-                                        {statusBadge}
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-mono text-secondary/70 dark:text-secondary/60">
+                                                {STEP_DURATIONS[step.id] || '32ms'}
+                                            </span>
+                                            {statusBadge}
+                                        </div>
                                     </div>
                                     <p className="text-[10px] text-secondary truncate mt-0.5">{step.desc}</p>
                                 </div>

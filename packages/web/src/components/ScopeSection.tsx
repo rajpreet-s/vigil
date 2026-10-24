@@ -199,7 +199,7 @@ export default function ScopeSection() {
           </div>
 
           <a
-            href="https://github.com/rajpreet-s/vigil/releases"
+            href="https://github.com/rajpreet-s/vigil/deployments/production"
             target="_blank"
             rel="noopener noreferrer"
             className="flex-shrink-0 px-4 py-2 rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#16181f] text-xs font-mono font-semibold text-on-surface flex items-center gap-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-[#fafafa] dark:hover:bg-[#1c1e26] transition-all"

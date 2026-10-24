@@ -26,7 +26,7 @@ export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData: _summar
 
   return (
     <div className="space-y-6 text-center py-4 animate-fadeIn">
-      <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-xl shadow-emerald-500/10">
+      <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400 shadow-lg shadow-emerald-500/10">
         <CheckCircle2 className="w-9 h-9" />
       </div>
 
@@ -47,7 +47,7 @@ export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData: _summar
 
         <div className="flex items-center justify-between text-xs">
           <span className="flex items-center gap-2 text-on-surface">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Self-Hosted & Gemini Engine</span>
           </span>
           <span className="text-[10px] font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
@@ -57,30 +57,30 @@ export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData: _summar
 
         <div className="flex items-center justify-between text-xs">
           <span className="flex items-center gap-2 text-on-surface">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Slack Webhook Notifications</span>
           </span>
-          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+          <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25 font-semibold">
             Ready
           </span>
         </div>
 
         <div className="flex items-center justify-between text-xs">
           <span className="flex items-center gap-2 text-on-surface">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Prometheus Webhook Ingestion</span>
           </span>
-          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+          <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25 font-semibold">
             Ready
           </span>
         </div>
 
         <div className="flex items-center justify-between text-xs">
           <span className="flex items-center gap-2 text-on-surface">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Topology Graph & Vector Index</span>
           </span>
-          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+          <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25 font-semibold">
             Indexed
           </span>
         </div>

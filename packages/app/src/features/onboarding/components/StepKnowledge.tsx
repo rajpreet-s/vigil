@@ -108,7 +108,7 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack, is
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
       <div>
-        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-mono mb-2">
+        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[11px] font-mono mb-2 font-semibold">
           <Network className="w-3.5 h-3.5" />
           <span>Step 4 of 4 • Causal Service Topology</span>
         </div>
@@ -223,7 +223,7 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack, is
         <div className="flex items-center justify-between text-xs font-bold text-on-surface uppercase tracking-wider pb-1 border-b border-surface-container-high/40">
           <span className="flex items-center gap-2">
             <span>Active Graph Dependencies</span>
-            <span className={`font-mono text-[11px] px-1.5 py-0.2 rounded ${edges.length > 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+            <span className={`font-mono text-[11px] px-1.5 py-0.2 rounded font-semibold ${edges.length > 0 ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/25' : 'bg-rose-500/20 text-rose-300'}`}>
               {edges.length} {edges.length === 1 ? 'edge' : 'edges'}
             </span>
           </span>
@@ -250,7 +250,7 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack, is
                 <div className="flex items-center gap-2 font-mono text-xs overflow-hidden">
                   <span className="text-primary font-semibold truncate">{e.upstream}</span>
                   <span className="text-secondary/50">➔</span>
-                  <span className="text-emerald-400 font-semibold truncate">{e.downstream}</span>
+                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold truncate">{e.downstream}</span>
                 </div>
 
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
@@ -277,8 +277,8 @@ export const StepKnowledge: React.FC<StepKnowledgeProps> = ({ onNext, onBack, is
       </div>
 
       {topoMsg && (
-        <div className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5 animate-fadeIn">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <div className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5 animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           <span>{topoMsg}</span>
         </div>
       )}

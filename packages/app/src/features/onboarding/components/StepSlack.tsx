@@ -120,9 +120,9 @@ export const StepSlack: React.FC<StepSlackProps> = ({ onNext, onBack, status, is
         )}
 
         {serverSlackDetected && (
-          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center justify-between">
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
             <span className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>Slack Webhook URL configured in company settings</span>
             </span>
             <span className="text-[10px] font-mono text-secondary/70">Ready</span>
@@ -197,13 +197,13 @@ export const StepSlack: React.FC<StepSlackProps> = ({ onNext, onBack, status, is
           <div
             className={`p-3 rounded-xl border text-xs space-y-1 ${
               testResult.success
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
                 : 'bg-red-500/10 border-red-500/30 text-red-400'
             }`}
           >
             <div className="flex items-center gap-2 font-semibold">
               {testResult.success ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
               ) : (
                 <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
               )}
