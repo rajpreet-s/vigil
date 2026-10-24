@@ -46,7 +46,7 @@ export const DashboardLayout: React.FC = () => {
         <Header />
         
         {/* Page Contents - Enabled flex-col & overflow-y-auto for global screen scrolling */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto relative z-0">
           <Outlet />
         </div>
       </main>

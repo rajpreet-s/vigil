@@ -174,7 +174,7 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
                                 <span className="text-xs font-bold font-mono text-on-surface">
                                     Gemini 3.8 Flash
                                 </span>
-                                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 font-semibold">
                                     Recommended
                                 </span>
                             </div>
@@ -231,9 +231,9 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
                     </div>
 
                     {serverEnvDetected && (
-                        <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center justify-between">
+                        <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
                             <span className="flex items-center gap-2">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                                 <span>
                                     {isOwner
                                         ? `Cluster environment key detected ${serverKeyPreview ? `(${serverKeyPreview})` : ''}`
@@ -300,7 +300,7 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
                                 }
                                 className={`px-4 py-2 rounded-lg font-semibold text-xs transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${
                                     isVerified
-                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                        ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30'
                                         : 'bg-primary text-on-primary hover:brightness-110 shadow-md shadow-primary/20'
                                 }`}
                             >
@@ -311,7 +311,7 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
                                     </>
                                 ) : isVerified ? (
                                     <>
-                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                                         <span>Key Verified & Active (Retest)</span>
                                     </>
                                 ) : (
@@ -338,12 +338,12 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
                         <div
                             className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 animate-fadeIn ${
                                 validationResult.success
-                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-300'
                                     : 'bg-status-critical/10 border-status-critical/30 text-rose-300'
                             }`}
                         >
                             {validationResult.success ? (
-                                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                             ) : (
                                 <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
                             )}
@@ -363,17 +363,17 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
             </div>
 
             {/* Sticky Bottom Navigation Footer */}
-            <div className="sticky bottom-0 bg-[#111318]/95 backdrop-blur-md pt-4 pb-1 border-t border-surface-container-high/60 z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="sticky bottom-0 bg-surface/95 dark:bg-[#111318]/95 backdrop-blur-md pt-4 pb-1 border-t border-surface-container-high/60 z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="text-xs text-secondary/80 flex items-center gap-1.5">
                     {!isVerified && !(serverEnvDetected && !isOwner) ? (
-                        <span className="text-amber-400/90 font-medium flex items-center gap-1">
+                        <span className="text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
                             <AlertCircle className="w-3.5 h-3.5" />
                             {isOwner
                                 ? 'Key verification required to unlock next step'
                                 : 'Awaiting owner Gemini key configuration'}
                         </span>
                     ) : (
-                        <span className="text-emerald-400 font-medium flex items-center gap-1">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             Gemini AI reasoning verified
                         </span>
@@ -383,7 +383,7 @@ export const StepWorkspace: React.FC<StepWorkspaceProps> = ({ onNext, status, is
                 <button
                     type="submit"
                     disabled={!isVerified && !(serverEnvDetected && !isOwner)}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary text-on-primary font-bold text-xs hover:brightness-110 shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-b from-[#F97316] to-[#D97706] text-white font-bold text-xs hover:brightness-105 shadow-md shadow-orange-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                     <span>Continue to Telemetry Ingestion</span>
                     <ArrowRight className="w-4 h-4" />

@@ -17,7 +17,7 @@ export const Login: React.FC = () => {
     const handleGoogleLogin = () => {
         setIsLoading(true);
         const apiBase = import.meta.env.VITE_API_BASE_URL || '';
-        const currentTheme = theme || localStorage.getItem('theme') || 'dark';
+        const currentTheme = theme || localStorage.getItem('theme') || 'light';
         window.location.href = `${apiBase}/api/auth/google?theme=${currentTheme}`;
     };
 
@@ -32,7 +32,7 @@ export const Login: React.FC = () => {
             });
             if (res.ok) {
                 const isLocalhost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
-                const currentTheme = theme || localStorage.getItem('theme') || 'dark';
+                const currentTheme = theme || localStorage.getItem('theme') || 'light';
                 window.location.href = isLocalhost ? `/?theme=${currentTheme}` : `/app?theme=${currentTheme}`;
             } else {
                 const data = await res.json().catch(() => ({}));

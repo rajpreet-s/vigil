@@ -1,4 +1,5 @@
 import VigilLogo from './VigilLogo';
+import { ArrowUpRight } from 'lucide-react';
 
 export default function Footer() {
   const getAppUrl = () => {
@@ -49,7 +50,7 @@ export default function Footer() {
               className="hover:text-on-surface transition-colors flex items-center gap-1"
             >
               <span>GitHub</span>
-              <span className="material-symbols-outlined text-[12px]">arrow_outward</span>
+              <ArrowUpRight className="w-3 h-3" />
             </a>
             <a
               href={getAppUrl()}

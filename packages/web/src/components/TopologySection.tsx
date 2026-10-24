@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Workflow, Network, Database, ArrowDown, Lock, ShoppingCart, Server, MinusCircle, BookOpen, FileText, Clock, CheckCircle2, Shield, Cable, MousePointerClick } from 'lucide-react';
 
 type ArchTab = 'graph' | 'rag' | 'settle';
 
@@ -44,7 +45,7 @@ export default function TopologySection() {
               {/* Top Bar with Mode Switcher */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-black/[0.06] dark:border-white/[0.08] px-4 sm:px-6 py-3 bg-[#f9fafb] dark:bg-[#16181f] gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary-container text-lg">schema</span>
+                  <Workflow className="w-4 h-4 text-primary-container" />
                   <span className="font-mono text-xs font-semibold text-on-surface uppercase tracking-wider">
                     Vigil Engine Architecture
                   </span>
@@ -91,7 +92,7 @@ export default function TopologySection() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                 <div className="lg:col-span-5 space-y-4">
                   <div className="inline-flex items-center gap-1.5 text-xs font-mono text-primary-container font-semibold">
-                    <span className="material-symbols-outlined text-sm">hub</span>
+                    <Network className="w-3.5 h-3.5" />
                     Directed Acyclic Graph Reachability
                   </div>
                   <h3 className="text-xl sm:text-2xl font-bold text-on-surface tracking-tight">
@@ -127,7 +128,7 @@ export default function TopologySection() {
                     {/* Root Cause Node */}
                     <div className="w-full max-w-xs border-2 border-error/70 bg-error/10 rounded-xl p-3 shadow-sm flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <span className="material-symbols-outlined text-error text-lg">database</span>
+                        <Database className="w-4 h-4 text-error shrink-0" />
                         <div>
                           <div className="font-mono text-xs font-bold text-on-surface">postgres-primary</div>
                           <div className="text-[10px] text-error font-medium">ROOT CAUSE • High Connections</div>
@@ -140,16 +141,16 @@ export default function TopologySection() {
 
                     {/* Downward Connectors */}
                     <div className="flex items-center gap-8 text-on-surface-variant/40">
-                      <span className="material-symbols-outlined text-base">arrow_downward</span>
+                      <ArrowDown className="w-3.5 h-3.5" />
                       <span className="text-[10px] font-mono text-on-surface-variant">BFS Edge (Depth: 1)</span>
-                      <span className="material-symbols-outlined text-base">arrow_downward</span>
+                      <ArrowDown className="w-3.5 h-3.5" />
                     </div>
 
                     {/* Intermediate Layer */}
                     <div className="grid grid-cols-2 gap-4 w-full max-w-md">
                       <div className="border border-amber-500/40 bg-amber-500/10 rounded-lg p-2.5">
                         <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-amber-500 text-sm">lock</span>
+                          <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                           <span className="font-mono text-xs font-semibold text-on-surface">auth-service</span>
                         </div>
                         <div className="text-[10px] text-on-surface-variant mt-1">DB Pool Exhausted (503)</div>
@@ -157,7 +158,7 @@ export default function TopologySection() {
 
                       <div className="border border-amber-500/40 bg-amber-500/10 rounded-lg p-2.5">
                         <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-amber-500 text-sm">shopping_cart</span>
+                          <ShoppingCart className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                           <span className="font-mono text-xs font-semibold text-on-surface">checkout-api</span>
                         </div>
                         <div className="text-[10px] text-on-surface-variant mt-1">Order Timeout (504)</div>
@@ -166,13 +167,13 @@ export default function TopologySection() {
 
                     {/* Edge to Gateway */}
                     <div className="text-on-surface-variant/40">
-                      <span className="material-symbols-outlined text-base">arrow_downward</span>
+                      <ArrowDown className="w-3.5 h-3.5" />
                     </div>
 
                     {/* Edge Gateway Node */}
                     <div className="w-full max-w-xs border border-outline-variant bg-surface-container rounded-lg p-2.5 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-on-surface-variant text-sm">dns</span>
+                        <Server className="w-3.5 h-3.5 text-on-surface-variant shrink-0" />
                         <span className="font-mono text-xs text-on-surface">api-gateway</span>
                       </div>
                       <span className="text-[10px] font-mono text-on-surface-variant">Downstream Impact</span>
@@ -182,7 +183,7 @@ export default function TopologySection() {
                   {/* Isolated Node Badge */}
                   <div className="mt-2 pt-3 border-t border-outline-variant/60 flex items-center justify-between text-xs">
                     <span className="text-on-surface-variant font-mono text-[11px] flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-sm text-outline">do_not_disturb_on</span>
+                      <MinusCircle className="w-3.5 h-3.5 text-outline shrink-0" />
                       Isolated Vertex: <code className="text-on-surface font-semibold">analytics-worker</code> (0 connected edges)
                     </span>
                     <span className="text-[10px] font-mono text-primary-container uppercase font-semibold">Discarded from group</span>
@@ -195,7 +196,7 @@ export default function TopologySection() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                 <div className="lg:col-span-5 space-y-4">
                   <div className="inline-flex items-center gap-1.5 text-xs font-mono text-primary-container font-semibold">
-                    <span className="material-symbols-outlined text-sm">library_books</span>
+                    <BookOpen className="w-3.5 h-3.5" />
                     ChromaDB Vector Runbook Retrieval
                   </div>
                   <h3 className="text-xl sm:text-2xl font-bold text-on-surface tracking-tight">
@@ -238,7 +239,7 @@ export default function TopologySection() {
                     <div className="p-3 rounded-lg bg-surface-container border border-primary-container/40 flex items-start justify-between">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-primary-container text-sm">description</span>
+                          <FileText className="w-3.5 h-3.5 text-primary-container shrink-0" />
                           <span className="font-bold text-on-surface">runbooks/postgres-pool-saturation.md</span>
                         </div>
                         <p className="text-[11px] text-on-surface-variant font-sans">
@@ -257,7 +258,7 @@ export default function TopologySection() {
                     <div className="p-3 rounded-lg bg-surface-container border border-outline-variant/60 flex items-start justify-between opacity-70">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-on-surface-variant text-sm">description</span>
+                          <FileText className="w-3.5 h-3.5 text-on-surface-variant shrink-0" />
                           <span className="font-bold text-on-surface">runbooks/rds-failover-procedure.md</span>
                         </div>
                         <p className="text-[11px] text-on-surface-variant font-sans">
@@ -277,7 +278,7 @@ export default function TopologySection() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                 <div className="lg:col-span-5 space-y-4">
                   <div className="inline-flex items-center gap-1.5 text-xs font-mono text-primary-container font-semibold">
-                    <span className="material-symbols-outlined text-sm">timer</span>
+                    <Clock className="w-3.5 h-3.5" />
                     Dynamic Settle Debouncing
                   </div>
                   <h3 className="text-xl sm:text-2xl font-bold text-on-surface tracking-tight">
@@ -340,7 +341,7 @@ export default function TopologySection() {
                       <span className="text-emerald-500 font-bold text-[11px] w-12">t = 22.1s</span>
                       <div className="flex-1 p-2.5 rounded bg-emerald-500/10 border border-emerald-500/40 flex items-center justify-between text-emerald-600 dark:text-emerald-400 font-bold">
                         <span className="flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-sm">check_circle</span>
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                           Silence Window Settled → Batch Dispatched to LangGraph
                         </span>
                         <span className="text-[10px] bg-emerald-500/20 px-2 py-0.5 rounded">1 PAGE ONLY</span>
@@ -359,7 +360,7 @@ export default function TopologySection() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="border border-outline-variant rounded-xl p-6 bg-surface-container-low hover:border-outline transition-all space-y-3 group">
             <div className="w-10 h-10 rounded-lg bg-primary-container/10 border border-primary-container/20 flex items-center justify-center text-primary-container group-hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined text-xl">security</span>
+              <Shield className="w-5 h-5" />
             </div>
             <h4 className="font-bold text-base text-on-surface">100% Air-Gapped &amp; Private</h4>
             <p className="text-xs text-on-surface-variant leading-relaxed">
@@ -369,7 +370,7 @@ export default function TopologySection() {
 
           <div className="border border-outline-variant rounded-xl p-6 bg-surface-container-low hover:border-outline transition-all space-y-3 group">
             <div className="w-10 h-10 rounded-lg bg-primary-container/10 border border-primary-container/20 flex items-center justify-center text-primary-container group-hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined text-xl">cable</span>
+              <Cable className="w-5 h-5" />
             </div>
             <h4 className="font-bold text-base text-on-surface">Multi-Provider Ingestion</h4>
             <p className="text-xs text-on-surface-variant leading-relaxed">
@@ -379,7 +380,7 @@ export default function TopologySection() {
 
           <div className="border border-outline-variant rounded-xl p-6 bg-surface-container-low hover:border-outline transition-all space-y-3 group">
             <div className="w-10 h-10 rounded-lg bg-primary-container/10 border border-primary-container/20 flex items-center justify-center text-primary-container group-hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined text-xl">touch_app</span>
+              <MousePointerClick className="w-5 h-5" />
             </div>
             <h4 className="font-bold text-base text-on-surface">Human-in-the-Loop Actions</h4>
             <p className="text-xs text-on-surface-variant leading-relaxed">

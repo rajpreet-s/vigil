@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Code2 } from 'lucide-react';
 
 interface PipelineNode {
   id: string;
@@ -284,7 +285,7 @@ export default function HowItWorksSection() {
               <div className="lg:col-span-5 border border-outline-variant rounded-xl bg-surface-container-low overflow-hidden flex flex-col">
                 <div className="px-4 py-2 border-b border-outline-variant/60 flex items-center justify-between text-xs font-mono text-on-surface-variant bg-surface-container">
                   <span className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-sm text-primary-container">data_object</span>
+                    <Code2 className="w-3.5 h-3.5 text-primary-container" />
                     AgentState Output
                   </span>
                   <span className="text-[10px] text-emerald-500 font-semibold">VALIDATED</span>

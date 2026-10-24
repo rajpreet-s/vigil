@@ -1,5 +1,5 @@
 import React from 'react';
-import { ListFilter, Clock, Layers, Loader2, ShieldAlert } from 'lucide-react';
+import { ListFilter, Clock, Layers, Loader2, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { Badge } from '../../../components/ui/Badge';
 import { useIncidents } from '../hooks/useIncidents';
@@ -22,7 +22,6 @@ export const IncidentList: React.FC<IncidentListProps> = ({
         selectedIncidentId,
         setSelectedIncidentId,
         filterSeverity,
-        setFilterSeverity,
         activeOrg,
     } = useApp();
 
@@ -41,15 +40,25 @@ export const IncidentList: React.FC<IncidentListProps> = ({
         }
     }, [apiIncidents, selectedIncidentId, setSelectedIncidentId]);
 
+    const [filterStatus, setFilterStatus] = React.useState<'all' | 'active' | 'resolved'>('all');
+
     // Map API incidents to clean display cards
     const displayIncidents = apiIncidents.map(inc => {
         const parsed = parseRcaSummary(inc.rca_summary, inc.services_affected);
+        const rawStatus = (inc.status || '').toUpperCase();
+        const normalizedStatus =
+            rawStatus === 'APPROVED' || rawStatus === 'RESOLVED'
+                ? 'resolved'
+                : rawStatus === 'DISMISSED'
+                  ? 'dismissed'
+                  : 'reviewing';
+
         return {
             id: inc.id,
             shortId: inc.id.length > 12 ? `inc-${inc.id.slice(0, 8)}` : inc.id,
             title: parsed.cleanTitle,
             rootCauseService: parsed.rootCauseService,
-            status: inc.status.toLowerCase(),
+            status: normalizedStatus,
             severity: 'critical' as const,
             timestamp: new Date(inc.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             alertsCount: inc.anomaly_count,
@@ -57,6 +66,23 @@ export const IncidentList: React.FC<IncidentListProps> = ({
             summarySnippet: (parsed?.cleanSummary || parsed?.q1WhatBroke || '').split('\n')[0].replace(/^•\s*/, ''),
         };
     });
+
+    const filteredIncidents = displayIncidents.filter((inc) => {
+        if (filterStatus === 'active') {
+            return inc.status !== 'resolved' && inc.status !== 'dismissed';
+        }
+        if (filterStatus === 'resolved') {
+            return inc.status === 'resolved' || inc.status === 'dismissed';
+        }
+        return true;
+    });
+
+    // Auto-select the first incident from the filtered list if none selected or invalid
+    React.useEffect(() => {
+        if (filteredIncidents.length > 0 && (!selectedIncidentId || !filteredIncidents.some(i => i.id === selectedIncidentId))) {
+            setSelectedIncidentId(filteredIncidents[0].id);
+        }
+    }, [filteredIncidents, selectedIncidentId, setSelectedIncidentId]);
 
     const handleIncidentClick = (id: string) => {
         setSelectedIncidentId(id);
@@ -69,14 +95,14 @@ export const IncidentList: React.FC<IncidentListProps> = ({
             <div className={`w-[56px] border-r border-surface-container-high/40 flex flex-col items-center justify-between py-3 bg-surface-container-low/95 backdrop-blur-md select-none z-10 ${className}`}>
                 <button
                     onClick={onExpandList}
-                    title="Active Outages (Click to Expand List)"
+                    title="Incident Queue (Click to Expand List)"
                     className="p-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-primary transition-all border border-surface-container-highest flex items-center justify-center"
                 >
                     <ListFilter className="w-4 h-4" />
                 </button>
 
                 <div className="flex-1 w-full flex flex-col items-center justify-start gap-3.5 py-4 overflow-y-auto scrollbar-thin">
-                    {displayIncidents.map((inc) => {
+                    {filteredIncidents.map((inc) => {
                         const isSelected = selectedIncidentId === inc.id;
                         const isInactive = inc.status === 'resolved' || inc.status === 'dismissed';
 
@@ -101,7 +127,7 @@ export const IncidentList: React.FC<IncidentListProps> = ({
                 </div>
 
                 <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
-                    {displayIncidents.length}
+                    {filteredIncidents.length}
                 </span>
             </div>
         );
@@ -113,41 +139,58 @@ export const IncidentList: React.FC<IncidentListProps> = ({
                 <div className="flex items-center gap-2">
                     <ListFilter className="w-3.5 h-3.5 text-primary" />
                     <span className="text-[11px] font-bold text-on-surface uppercase tracking-wider font-mono">
-                        Active Outages ({displayIncidents.length})
+                        Incident Queue ({filteredIncidents.length})
                     </span>
                 </div>
                 <div className="flex gap-1 bg-surface-container-lowest p-0.5 rounded-lg border border-surface-container-high">
-                    <button
-                        onClick={() => setFilterSeverity('all')}
-                        className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold transition-all ${
-                            filterSeverity === 'all'
-                                ? 'bg-surface-container-high text-on-surface shadow-sm'
-                                : 'text-secondary hover:text-on-surface'
-                        }`}
-                    >
-                        All
-                    </button>
-                    <button
-                        onClick={() => setFilterSeverity('critical')}
-                        className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold transition-all ${
-                            filterSeverity === 'critical'
-                                ? 'bg-status-critical/20 text-status-critical shadow-sm'
-                                : 'text-secondary/70 hover:text-on-surface'
-                        }`}
-                    >
-                        Crit
-                    </button>
+                    {(['all', 'active', 'resolved'] as const).map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => setFilterStatus(tab)}
+                            className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold capitalize transition-all ${
+                                filterStatus === tab
+                                    ? 'bg-surface-container-high text-on-surface shadow-sm'
+                                    : 'text-secondary hover:text-on-surface'
+                            }`}
+                        >
+                            {tab}
+                        </button>
+                    ))}
                 </div>
             </div>
 
-            {isLoading && displayIncidents.length === 0 ? (
+            {isLoading && filteredIncidents.length === 0 ? (
                 <div className="p-8 flex flex-col items-center justify-center gap-3 text-secondary/70">
                     <Loader2 className="w-5 h-5 animate-spin text-primary" />
                     <span className="text-xs font-mono">Fetching telemetry incidents...</span>
                 </div>
+            ) : filteredIncidents.length === 0 ? (
+                <div className="p-6 text-center flex flex-col items-center justify-center gap-2.5 text-secondary my-auto min-h-[200px]">
+                    <div className="w-9 h-9 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center border border-emerald-500/20">
+                        <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                        <div className="font-semibold text-xs text-on-surface">No {filterStatus !== 'all' ? filterStatus : ''} Incidents</div>
+                        <div className="text-[11px] text-secondary mt-1 leading-relaxed max-w-[200px] mx-auto">
+                            {filterStatus !== 'all' ? (
+                                <>
+                                    No {filterStatus} outages.{' '}
+                                    <button
+                                        onClick={() => setFilterStatus('all')}
+                                        className="text-primary underline font-medium hover:brightness-110"
+                                    >
+                                        Show all
+                                    </button>
+                                </>
+                            ) : (
+                                'Cluster telemetry nominal. Webhook receiver active.'
+                            )}
+                        </div>
+                    </div>
+                </div>
             ) : (
                 <div className="divide-y divide-surface-container-high/30">
-                    {displayIncidents.map((inc) => {
+                    {filteredIncidents.map((inc) => {
                         const isSelected = selectedIncidentId === inc.id;
                         const isInactive = inc.status === 'resolved' || inc.status === 'dismissed';
                         return (
@@ -158,29 +201,29 @@ export const IncidentList: React.FC<IncidentListProps> = ({
                                     isSelected
                                         ? 'bg-primary/10 border-l-4 border-primary shadow-sm'
                                         : 'hover:bg-surface-container-high/20 border-l-4 border-transparent'
-                                } ${isInactive ? 'opacity-60 hover:opacity-90' : ''}`}
+                                } ${isInactive ? 'opacity-70 hover:opacity-100' : ''}`}
                             >
                                 <div className="flex items-center justify-between gap-2 mb-1.5">
                                     <span className="text-[10px] font-mono text-primary/80 font-bold bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
                                         {inc.shortId}
                                     </span>
                                     <div className="flex items-center gap-1.5">
-                                        <Badge
-                                            variant={
-                                                inc.severity === 'critical' ? 'critical' : 'warning'
-                                            }
-                                            category="severity"
-                                        >
-                                            {inc.severity}
-                                        </Badge>
-                                        {isInactive && (
+                                        {inc.status === 'resolved' ? (
+                                            <span className="text-[10px] font-mono px-2 py-0.5 rounded font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                                RESOLVED
+                                            </span>
+                                        ) : inc.status === 'dismissed' ? (
+                                            <span className="text-[10px] font-mono px-2 py-0.5 rounded font-semibold bg-secondary/15 text-secondary border border-secondary/20">
+                                                DISMISSED
+                                            </span>
+                                        ) : (
                                             <Badge
                                                 variant={
-                                                    inc.status === 'resolved' ? 'healthy' : 'secondary'
+                                                    inc.severity === 'critical' ? 'critical' : 'warning'
                                                 }
-                                                category="status"
+                                                category="severity"
                                             >
-                                                {inc.status}
+                                                {inc.severity}
                                             </Badge>
                                         )}
                                     </div>

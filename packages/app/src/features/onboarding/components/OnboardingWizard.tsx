@@ -32,6 +32,31 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
     return 1;
   });
 
+  const [maxStepReached, setMaxStepReached] = useState<number>(() => {
+    try {
+      const savedMax = localStorage.getItem('vigil_onboarding_max_step');
+      if (savedMax) {
+        const parsed = parseInt(savedMax, 10);
+        if (!isNaN(parsed) && parsed >= 1) return parsed;
+      }
+      const savedStep = localStorage.getItem('vigil_onboarding_step');
+      if (savedStep) {
+        const parsed = parseInt(savedStep, 10);
+        if (!isNaN(parsed) && parsed >= 1) return parsed;
+      }
+      const savedCompleted = localStorage.getItem('vigil_onboarding_completed_steps');
+      if (savedCompleted) {
+        const parsed = JSON.parse(savedCompleted);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return Math.min(Math.max(...parsed) + 1, 5);
+        }
+      }
+    } catch {
+      // Fallback
+    }
+    return 1;
+  });
+
   const [completedSteps, setCompletedSteps] = useState<number[]>(() => {
     try {
       const saved = localStorage.getItem('vigil_onboarding_completed_steps');
@@ -65,7 +90,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
     } catch (e) {
       console.error('Failed to persist onboarding step', e);
     }
+    setMaxStepReached((prev) => Math.max(prev, currentStep));
   }, [currentStep]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vigil_onboarding_max_step', maxStepReached.toString());
+    } catch (e) {
+      console.error('Failed to persist onboarding max step', e);
+    }
+  }, [maxStepReached]);
 
   useEffect(() => {
     try {
@@ -98,7 +132,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
       }
       return prev;
     });
-    setCurrentStep((prev) => Math.min(prev + 1, 5));
+    const next = Math.min(currentStep + 1, 5);
+    setMaxStepReached((prev) => Math.max(prev, next));
+    setCurrentStep(next);
   };
 
   const handlePrevStep = () => {
@@ -107,11 +143,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
 
   const handleResetWizard = () => {
     localStorage.removeItem('vigil_onboarding_step');
+    localStorage.removeItem('vigil_onboarding_max_step');
     localStorage.removeItem('vigil_onboarding_data');
     localStorage.removeItem('vigil_onboarding_completed_steps');
     localStorage.removeItem('vigil_onboarding_completed');
     setWizardData({});
     setCompletedSteps([]);
+    setMaxStepReached(1);
     setCurrentStep(1);
   };
 
@@ -137,9 +175,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
   const canNavigateTo = (stepNum: number) => {
     if (stepNum === currentStep) return true;
     if (!isOwner) return true; // non-owners can inspect all steps in read-only mode
-    if (completedSteps.includes(stepNum)) return true;
-    // Step 1 is always accessible
     if (stepNum === 1) return true;
+    if (stepNum <= maxStepReached) return true;
+    if (completedSteps.includes(stepNum)) return true;
+    // Step N is accessible if prior step N-1 was completed
+    if (completedSteps.includes(stepNum - 1)) return true;
+    // Readiness verification (Step 5) is accessible once Step 4 is completed or if user reached it
+    if (stepNum === 5 && (completedSteps.includes(4) || isCompleted || maxStepReached >= 5)) return true;
+    if (isCompleted) return true;
     return false;
   };
 
@@ -158,8 +201,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
               <p className="text-[11px] text-secondary/80 flex items-center gap-2">
                 <span>Self-Hosted SRE Copilot</span>
                 <span className="text-slate-600">•</span>
-                <span className="text-emerald-400 font-mono flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-emerald-700 dark:text-emerald-400 font-mono flex items-center gap-1.5 font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   API Active
                 </span>
                 <span className="text-slate-600">•</span>
@@ -224,24 +267,24 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
                     onClick={() => {
                       if (isNavigable) setCurrentStep(s.num);
                     }}
-                    className={`flex items-center gap-1.5 py-1 px-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                    className={`flex items-center gap-1.5 py-1 px-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                       isActive
-                        ? 'bg-primary/20 text-primary border border-primary/30'
+                        ? 'bg-primary/15 text-primary border border-primary/30'
                         : isDone
-                        ? 'bg-emerald-500/10 text-emerald-400'
+                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
                         : 'opacity-40 text-secondary cursor-not-allowed'
                     }`}
                   >
                     <span
                       className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-mono font-bold ${
                         isDone
-                          ? 'bg-emerald-400 text-black'
+                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
                           : isActive
                           ? 'bg-primary text-on-primary'
                           : 'bg-surface-container-high text-secondary'
                       }`}
                     >
-                      {isDone ? <Check className="w-2.5 h-2.5 stroke-[3]" /> : s.num}
+                      {isDone ? <Check className="w-2.5 h-2.5 stroke-[2.5]" /> : s.num}
                     </span>
                     <span>{s.short}</span>
                   </button>
@@ -282,7 +325,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
                         isNavigable ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'
                       } ${
                         isActive
-                          ? 'bg-primary/10 border border-primary/40 shadow-sm'
+                          ? 'bg-primary/10 border border-primary/40 shadow-xs'
                           : isDone
                           ? 'hover:bg-surface-container-high/40 border border-transparent'
                           : 'border border-transparent'
@@ -291,14 +334,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
                       <div
                         className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-bold flex-shrink-0 mt-0.5 transition-all ${
                           isDone
-                            ? 'bg-emerald-400 text-black'
+                            ? 'bg-emerald-500/15 dark:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
                             : isActive
                             ? 'bg-primary text-on-primary'
                             : 'bg-surface-container-high text-secondary/60'
                         }`}
                       >
                         {isDone ? (
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                         ) : !isNavigable ? (
                           <Lock className="w-3 h-3 text-secondary/50" />
                         ) : (
@@ -306,13 +349,20 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
                         )}
                       </div>
 
-                      <div className="overflow-hidden">
-                        <div
-                          className={`text-xs font-bold transition-colors ${
-                            isActive ? 'text-primary' : isDone ? 'text-emerald-400' : 'text-on-surface/80'
-                          }`}
-                        >
-                          {s.label}
+                      <div className="overflow-hidden flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <div
+                            className={`text-xs font-bold transition-colors ${
+                              isActive ? 'text-primary' : 'text-on-surface'
+                            }`}
+                          >
+                            {s.label}
+                          </div>
+                          {isDone && (
+                            <span className="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                              DONE
+                            </span>
+                          )}
                         </div>
                         <div className="text-[11px] text-secondary/70 truncate">{s.desc}</div>
                       </div>
@@ -329,7 +379,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
                   <Activity className="w-3.5 h-3.5 text-primary" />
                   Live Cluster Telemetry
                 </span>
-                <span className="text-[10px] font-mono text-emerald-400">Online</span>
+                <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                  Online
+                </span>
               </div>
 
               <div className="space-y-2.5 text-xs">
@@ -338,7 +391,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
                     <Server className="w-3.5 h-3.5 text-secondary" />
                     Database Edge
                   </span>
-                  <span className="font-mono text-emerald-400">PostgreSQL</span>
+                  <span className="font-mono text-emerald-700 dark:text-emerald-400 font-medium">PostgreSQL</span>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -362,7 +415,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
                     <Activity className="w-3.5 h-3.5 text-secondary" />
                     Live Anomalies
                   </span>
-                  <span className="font-mono text-emerald-400">{status?.integrations?.prometheus?.anomalyCount || 0} ingested</span>
+                  <span className="font-mono text-emerald-700 dark:text-emerald-400 font-medium">{status?.integrations?.prometheus?.anomalyCount || 0} ingested</span>
                 </div>
               </div>
             </div>

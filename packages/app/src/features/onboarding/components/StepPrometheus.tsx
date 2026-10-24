@@ -141,12 +141,12 @@ receivers:
               onClick={handleCopyUrl}
               className="px-3.5 py-2 bg-surface-container-high hover:bg-surface-container-highest text-xs font-semibold text-on-surface rounded-lg border border-surface-container-highest transition-all flex items-center gap-1.5 whitespace-nowrap"
             >
-              {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copiedUrl ? 'Copied' : 'Copy URL'}</span>
             </button>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-secondary/70 pt-1">
-            <Shield className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+            <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
             <span>
               Scoped to <strong className="text-on-surface">{activeOrg?.name || 'Your Organization'}</strong>. Alerts sent with this API key are routed directly and exclusively to this account.
             </span>
@@ -170,7 +170,7 @@ receivers:
             disabled={isTesting}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-shrink-0 ${
               testResult?.success
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30'
                 : 'bg-orange-500 text-white hover:brightness-110 shadow-md shadow-orange-500/20'
             }`}
           >
@@ -181,7 +181,7 @@ receivers:
               </>
             ) : testResult?.success ? (
               <>
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Ingestion Verified (Retest)</span>
               </>
             ) : (
@@ -197,12 +197,12 @@ receivers:
           <div
             className={`p-3 rounded-xl border text-xs flex items-center gap-2.5 animate-fadeIn ${
               testResult.success
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
                 : 'bg-red-500/10 border-red-500/30 text-red-400'
             }`}
           >
             {testResult.success ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
             ) : (
               <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
             )}
@@ -232,7 +232,7 @@ receivers:
                   onClick={handleCopyYaml}
                   className="text-xs text-primary hover:underline font-semibold flex items-center gap-1.5"
                 >
-                  {copiedYaml ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiedYaml ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedYaml ? 'YAML Copied!' : 'Copy YAML'}</span>
                 </button>
               </div>
