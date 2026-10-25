@@ -120,17 +120,18 @@ export class WebhookService {
         }
     }
 
-    public async processDeployment(commit: GitHubCommit, headCommit: any, ref: string): Promise<void> {
+    public async processDeployment(commit: GitHubCommit, headCommit: any, ref: string, orgId?: string): Promise<void> {
         const filesChanged = [
             ...commit.added,
             ...commit.removed,
             ...commit.modified
         ];
 
-        const serviceName = this.extractServiceName(filesChanged);
+        let serviceName = this.extractServiceName(filesChanged);
         if (!serviceName) {
-            this.logger?.info(`Skipping commit ${commit.id} because it did not affect any service packages.`);
-            return;
+            // If repository files don't map to a monorepo subfolder, fallback to api-service or service label
+            serviceName = 'api-service';
+            this.logger?.info(`Commit ${commit.id} did not match monorepo package dirs; defaulting service_name to "${serviceName}".`);
         }
 
         const branch = ref.replace('refs/heads/', '');
@@ -139,7 +140,7 @@ export class WebhookService {
         const prTitle = commit.message.split('\n')[0] ?? null; // Use first line of commit message as PR title
         const deployedAt = new Date(commit.timestamp || headCommit?.timestamp || new Date());
 
-        this.logger?.info(`Registering deployment event for service ${serviceName}, commit: ${commitSha}`);
+        this.logger?.info(`Registering deployment event for service ${serviceName}, commit: ${commitSha}, org: ${orgId || 'unassigned'}`);
 
         // Insert into deploy_events table
         const deployEvent = await this.prisma.deployEvent.create({
@@ -150,7 +151,8 @@ export class WebhookService {
                 author,
                 commit_sha: commitSha,
                 files_changed: filesChanged,
-                deployed_at: deployedAt
+                deployed_at: deployedAt,
+                org_id: orgId || null
             }
         });
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Sun, Moon, ArrowRight, ArrowUpRight, Menu, X } from 'lucide-react';
 import VigilLogo from './VigilLogo';
 import posthog from 'posthog-js';
 
@@ -90,7 +91,7 @@ export default function NavBar() {
             className="text-xs font-medium text-on-surface-variant hover:text-on-surface flex items-center gap-1 transition-colors duration-150"
           >
             <span>GitHub</span>
-            <span className="material-symbols-outlined text-[13px]">arrow_outward</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
           </a>
         </nav>
 
@@ -103,9 +104,7 @@ export default function NavBar() {
             aria-label="Toggle theme"
             title={isDark ? "Switch to Dawn light mode" : "Switch to Vigil dark mode"}
           >
-            <span className="material-symbols-outlined text-[18px]">
-              {isDark ? 'light_mode' : 'dark_mode'}
-            </span>
+            {isDark ? <Sun className="w-4 h-4 text-primary" /> : <Moon className="w-4 h-4 text-amber-600" />}
           </button>
 
           {/* Launch Console CTA */}
@@ -114,7 +113,7 @@ export default function NavBar() {
             className="bg-gradient-to-b from-[#F97316] to-[#D97706] text-white font-semibold text-xs px-4 py-2 rounded-lg hover:brightness-105 active:scale-[0.98] transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_4px_12px_rgba(234,88,12,0.25)] border border-[#C2410C]/80 flex items-center gap-1.5"
           >
             <span>Launch Console</span>
-            <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
           
           {/* Mobile hamburger */}
@@ -123,9 +122,7 @@ export default function NavBar() {
             onClick={() => setMobileOpen((v) => !v)}
             aria-label="Toggle mobile menu"
           >
-            <span className="material-symbols-outlined text-[20px]">
-              {mobileOpen ? 'close' : 'menu'}
-            </span>
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
@@ -162,7 +159,7 @@ export default function NavBar() {
             className="text-sm font-medium text-on-surface-variant hover:text-on-surface py-2 flex items-center justify-between"
           >
             <span>GitHub</span>
-            <span className="material-symbols-outlined text-sm">arrow_outward</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
           </a>
         </div>
       )}

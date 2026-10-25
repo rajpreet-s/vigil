@@ -132,6 +132,7 @@ export const AgentStateSchema = Annotation.Root({
         geminiApiKey?: string | null;
         geminiModel?: string | null;
         slackWebhookUrl?: string | null;
+        deployWindowMinutes?: number | null;
     } | null>({
         reducer: (_left, right) => right,
         default: () => null,

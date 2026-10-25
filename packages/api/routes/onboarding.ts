@@ -1,6 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
+import crypto from 'node:crypto';
 import { WebClient } from '@slack/web-api';
 import { WebhookService } from '../services/webhookService.js';
+import { IncidentCoordinator } from '../services/incident-coordinator/IncidentCoordinator.js';
 import type { UserPayload } from '../plugins/auth.js';
 
 async function getAuthAndOrg(request: any, fastify: any) {
@@ -70,17 +72,37 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                 const servicesCount = await fastify.prisma.service.count();
                 const anomalyCount = await fastify.prisma.anomaly.count();
 
+                const deployWhere = org?.id ? { OR: [{ org_id: org.id }, { org_id: null }] } : {};
+                const deployCount = await fastify.prisma.deployEvent.count({ where: deployWhere });
+                const deployWindowMinutes = org?.deploy_window_minutes ?? 30;
+                let githubSecret = org?.github_webhook_secret;
+                if (!githubSecret) {
+                    githubSecret = org?.api_key ? `whsec_${org.api_key.slice(0, 16)}` : 'development_secret';
+                }
+
                 // Read Gemini & Slack settings from database (org-level), fallback to env
-                const geminiKey = org?.gemini_api_key || process.env.GEMINI_API_KEY || null;
+                const geminiKey =
+                    org?.gemini_api_key || process.env.GEMINI_API_KEY || null;
                 const geminiModel =
                     org?.gemini_model || process.env.GEMINI_MODEL || 'gemini-3.8-flash';
                 const webhookUrl = org?.slack_webhook_url || process.env.SLACK_WEBHOOK_URL || null;
+
+                // Auto-repair demo org key if it was missing in database
+                if (org && !org.gemini_api_key && geminiKey) {
+                    await fastify.prisma.organization
+                        .update({
+                            where: { id: org.id },
+                            data: { gemini_api_key: geminiKey, gemini_model: geminiModel },
+                        })
+                        .catch(() => {});
+                }
 
                 const hasGemini = !!geminiKey && geminiKey.trim().length > 0;
                 const hasSlack = !!webhookUrl && webhookUrl.trim().length > 0;
                 const hasTopology = topologyCount > 0;
                 const hasRunbooks = runbooksCount > 0;
                 const hasWebhooks = anomalyCount > 0;
+                const hasGithub = deployCount > 0 || !!org?.github_webhook_secret;
 
                 // Setup is considered complete if Gemini is configured (or verified) and Topology has at least 1 edge
                 const isComplete = (hasGemini || hasSlack) && hasTopology;
@@ -97,6 +119,10 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                 const webhookEndpoint = orgApiKey
                     ? `/api/webhook/alertmanager?api_key=${orgApiKey}`
                     : '/api/webhook/alertmanager';
+
+                const githubEndpoint = orgApiKey
+                    ? `/api/webhook/github?api_key=${orgApiKey}`
+                    : '/api/webhook/github';
 
                 return reply.send({
                     status: 'OK',
@@ -125,6 +151,14 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                             configured: hasWebhooks,
                             endpoint: webhookEndpoint,
                             anomalyCount,
+                        },
+                        github: {
+                            configured: hasGithub,
+                            endpoint: githubEndpoint,
+                            secret: githubSecret,
+                            deployWindowMinutes,
+                            deployCount,
+                            targetBranch: process.env.DEPLOY_BRANCH || 'main',
                         },
                         topology: { configured: hasTopology, edgeCount: topologyCount },
                         runbooks: { configured: hasRunbooks, documentCount: runbooksCount },
@@ -378,6 +412,124 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
 
     fastify.post('/onboarding/test-webhook', handleSimulateAlert);
     fastify.post('/onboarding/simulate-alert', handleSimulateAlert);
+
+    // POST /api/onboarding/github - Save GitHub deployment lookback window and secret
+    fastify.post(
+        '/onboarding/github',
+        {
+            schema: {
+                description: 'Configures GitHub webhook deploy lookback window and secret for the active org.',
+                tags: ['Onboarding'],
+                body: {
+                    type: 'object',
+                    properties: {
+                        deployWindowMinutes: { type: 'number' },
+                        secret: { type: 'string' },
+                    },
+                },
+            },
+        },
+        async (request, reply) => {
+            const { org, isOwner } = await getAuthAndOrg(request, fastify);
+            if (!isOwner) {
+                return reply.status(403).send({
+                    success: false,
+                    error: 'Forbidden: Only organization owners can configure GitHub settings.',
+                });
+            }
+            if (!org) {
+                return reply.status(404).send({ success: false, error: 'Organization not found' });
+            }
+
+            const body = (request.body as any) || {};
+            const deployWindowMinutes =
+                typeof body.deployWindowMinutes === 'number'
+                    ? Math.max(5, Math.min(720, Math.round(body.deployWindowMinutes)))
+                    : 30;
+            const secret = body.secret !== undefined ? String(body.secret).trim() : undefined;
+
+            const updated = await fastify.prisma.organization.update({
+                where: { id: org.id },
+                data: {
+                    deploy_window_minutes: deployWindowMinutes,
+                    ...(secret !== undefined ? { github_webhook_secret: secret || null } : {}),
+                },
+            });
+
+            return reply.send({
+                success: true,
+                deployWindowMinutes: updated.deploy_window_minutes ?? 30,
+                secret: updated.github_webhook_secret,
+                message: 'GitHub deployment configuration updated successfully.',
+            });
+        }
+    );
+
+    // POST /api/onboarding/simulate-deploy - Simulate a deployment event for live verification
+    fastify.post(
+        '/onboarding/simulate-deploy',
+        {
+            schema: {
+                description: 'Simulates a GitHub push deployment event for live testing in onboarding.',
+                tags: ['Onboarding'],
+                body: {
+                    type: 'object',
+                    properties: {
+                        service: { type: 'string' },
+                        prTitle: { type: 'string' },
+                        author: { type: 'string' },
+                        branch: { type: 'string' },
+                    },
+                },
+            },
+        },
+        async (request, reply) => {
+            try {
+                const { org } = await getAuthAndOrg(request, fastify);
+                const body = (request.body as any) || {};
+                const serviceName = body.service || 'payment-service';
+                const prTitle = body.prTitle || 'fix: update connection pool timeout [test simulation]';
+                const author = body.author || 'vigil-deployer';
+                const branch = body.branch || 'main';
+                const commitSha = crypto.randomBytes(20).toString('hex');
+                const filesChanged = [
+                    `packages/${serviceName}/src/index.ts`,
+                    `packages/${serviceName}/config.ts`,
+                ];
+                const deployedAt = new Date();
+
+                const deployEvent = await fastify.prisma.deployEvent.create({
+                    data: {
+                        service_name: serviceName,
+                        pr_title: prTitle,
+                        branch,
+                        author,
+                        commit_sha: commitSha,
+                        files_changed: filesChanged,
+                        deployed_at: deployedAt,
+                        org_id: org?.id || null,
+                    },
+                });
+
+                // Notify coordinator
+                await IncidentCoordinator.onDeployArrived(deployEvent.id, fastify.prisma, request.log);
+
+                const totalDeployments = await fastify.prisma.deployEvent.count({
+                    where: org?.id ? { OR: [{ org_id: org.id }, { org_id: null }] } : {},
+                });
+
+                return reply.send({
+                    success: true,
+                    message: `Simulated deployment for "${serviceName}" registered successfully!`,
+                    deployEvent,
+                    totalDeployments,
+                });
+            } catch (err: any) {
+                fastify.log.error(err, 'Failed to simulate deployment');
+                return reply.status(500).send({ success: false, error: err.message });
+            }
+        }
+    );
 
     // GET /api/onboarding/topology - List existing topology edges from database
     fastify.get(
@@ -779,6 +931,39 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                 success: true,
                 message: 'Onboarding completed successfully!',
                 timestamp: new Date().toISOString(),
+            });
+        }
+    );
+
+    // POST /api/onboarding/reset-demo - Restore demo account setup
+    fastify.post(
+        '/onboarding/reset-demo',
+        {
+            schema: {
+                description: 'Restores the pre-configured demo account onboarding state and topology.',
+                tags: ['Onboarding'],
+            },
+        },
+        async (request, reply) => {
+            const { org } = await getAuthAndOrg(request, fastify);
+            const targetOrg =
+                org ||
+                (await fastify.prisma.organization.findFirst({
+                    where: { slug: 'vigil-demo' },
+                }));
+            if (targetOrg) {
+                const defaultKey = process.env.GEMINI_API_KEY || null;
+                await fastify.prisma.organization.update({
+                    where: { id: targetOrg.id },
+                    data: {
+                        gemini_api_key: defaultKey,
+                        gemini_model: targetOrg.gemini_model || 'gemini-3.8-flash',
+                    },
+                });
+            }
+            return reply.send({
+                success: true,
+                message: 'Demo setup restored successfully.',
             });
         }
     );

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Check, Copy, Info, Code, BookOpen, Bug } from 'lucide-react';
 import posthog from 'posthog-js';
 
 type InstallTab = 'docker' | 'helm' | 'alertmanager';
@@ -134,9 +135,7 @@ export default function InstallSection() {
                 className="absolute top-4 right-4 px-3 py-1.5 rounded-lg bg-white dark:bg-[#1a1d26] hover:bg-[#fafafa] dark:hover:bg-[#222530] border border-black/10 dark:border-white/10 text-on-surface flex items-center gap-1.5 transition-all text-xs shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] active:scale-95"
                 title="Copy snippet"
               >
-                <span className="material-symbols-outlined text-sm">
-                  {copied ? 'check' : 'content_copy'}
-                </span>
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copied ? 'Copied' : 'Copy'}</span>
               </button>
 
@@ -145,7 +144,7 @@ export default function InstallSection() {
               </pre>
 
               <div className="mt-6 pt-4 border-t border-black/[0.06] dark:border-white/[0.06] text-[11px] text-on-surface-variant flex items-center gap-2">
-                <span className="material-symbols-outlined text-sm text-primary-container">info</span>
+                <Info className="w-3.5 h-3.5 text-primary-container shrink-0" />
                 <span>{current.notes}</span>
               </div>
             </div>
@@ -160,7 +159,7 @@ export default function InstallSection() {
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 hover:text-primary-container transition-colors"
           >
-            <span className="material-symbols-outlined text-base">code</span>
+            <Code className="w-4 h-4" />
             View GitHub Repository
           </a>
           <span>•</span>
@@ -170,7 +169,7 @@ export default function InstallSection() {
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 hover:text-primary-container transition-colors"
           >
-            <span className="material-symbols-outlined text-base">menu_book</span>
+            <BookOpen className="w-4 h-4" />
             Documentation &amp; Runbook Spec
           </a>
           <span>•</span>
@@ -180,7 +179,7 @@ export default function InstallSection() {
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 hover:text-primary-container transition-colors"
           >
-            <span className="material-symbols-outlined text-base">bug_report</span>
+            <Bug className="w-4 h-4" />
             File an Issue
           </a>
         </div>

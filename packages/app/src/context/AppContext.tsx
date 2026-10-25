@@ -214,6 +214,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             timeline: [],
           }));
           setIncidents(formatted);
+          setSelectedIncidentId((current) => {
+            if (!current && formatted.length > 0) {
+              return formatted[0].id;
+            }
+            return current;
+          });
           if (typeof data.activeTotal !== 'number') {
             setActiveIncidentsCount(formatted.filter((i) => i.status === 'reviewing').length);
           }

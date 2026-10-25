@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { RefreshCw, Settings, Menu, Sun, Moon } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -16,6 +16,33 @@ export const Header: React.FC = () => {
   } = useApp();
 
   const [showDevMenu, setShowDevMenu] = useState(false);
+  const devMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close dev menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (devMenuRef.current && !devMenuRef.current.contains(event.target as Node)) {
+        setShowDevMenu(false);
+      }
+    };
+    if (showDevMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDevMenu]);
+
+  // Close dev menu on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showDevMenu) {
+        setShowDevMenu(false);
+      }
+    };
+    if (showDevMenu) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showDevMenu]);
 
   const getTitle = () => {
     switch (location.pathname) {
@@ -34,13 +61,14 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="h-16 border-b border-surface-container-high/40 flex items-center justify-between px-3 sm:px-6 md:px-8 bg-surface-container-low/40 backdrop-blur-md relative select-none">
+    <header className="h-16 border-b border-surface-container-high/40 flex items-center justify-between px-3 sm:px-6 md:px-8 bg-surface-container-low/80 backdrop-blur-md relative z-40 select-none">
       <div className="flex items-center gap-2.5 sm:gap-4">
         {/* Mobile menu hamburger toggle */}
         <button
           onClick={toggleMobileDrawer}
           className="lg:hidden p-2 -ml-1 text-secondary hover:text-on-surface hover:bg-surface-container-high/40 rounded-lg transition-all"
           aria-label="Toggle navigation menu"
+          id="mobile-drawer-toggle"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -93,35 +121,44 @@ export const Header: React.FC = () => {
         <div className="h-4 w-px bg-surface-container-high/60"></div>
         
         {/* Dev settings gear icon */}
-        <div className="relative">
+        <div className="relative" ref={devMenuRef}>
           <button
-            onClick={() => setShowDevMenu(!showDevMenu)}
-            className={`p-2 text-secondary hover:text-on-surface hover:bg-surface-container-high/40 rounded-lg transition-all ${showDevMenu ? 'text-on-surface bg-surface-container-high/40' : ''}`}
+            onClick={() => setShowDevMenu((prev) => !prev)}
+            className={`p-2 text-secondary hover:text-on-surface hover:bg-surface-container-high/40 rounded-lg transition-all ${
+              showDevMenu ? 'text-on-surface bg-surface-container-high/50' : ''
+            }`}
             title="Dev Diagnostic Tools"
             aria-label="Dev Diagnostic Tools"
+            id="dev-settings-button"
           >
             <Settings className="w-4 h-4" />
           </button>
 
           {showDevMenu && (
-            <div className="absolute right-0 top-10 z-50 w-52 bg-surface-container border border-surface-container-high rounded-xl p-3 shadow-2xl text-[10px] font-mono space-y-2.5 animate-fadeIn">
-              <div className="border-b border-surface-container-high pb-1.5 text-secondary/70 font-bold uppercase tracking-wider flex items-center justify-between">
+            <div 
+              id="dev-settings-menu"
+              className="absolute right-0 top-full mt-2 z-50 w-60 bg-surface border border-surface-container-highest rounded-xl p-3.5 shadow-2xl text-[10px] font-mono space-y-2.5 animate-fadeIn"
+            >
+              <div className="border-b border-surface-container-high pb-2 text-secondary/80 font-bold uppercase tracking-wider flex items-center justify-between">
                 <span>Dev Diagnostics</span>
-                <span className="text-[9px] text-primary">{theme.toUpperCase()}</span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold">
+                  {theme.toUpperCase()}
+                </span>
               </div>
               <div className="flex items-center justify-between text-secondary">
                 <span>API Local Port:</span>
-                <span className="text-on-surface font-semibold">8080</span>
+                <span className="text-on-surface font-semibold font-mono">8080</span>
               </div>
               <div className="flex items-center justify-between text-secondary">
                 <span>Theme Mode:</span>
                 <span className="text-on-surface font-semibold capitalize">{theme}</span>
               </div>
-              <div className="flex items-center justify-between text-secondary">
+              <div className="flex items-center justify-between text-secondary pt-1 border-t border-surface-container-high/50">
                 <span>SSE Connection:</span>
                 <button
+                  type="button"
                   onClick={() => setConnectionState(connectionState === 'connected' ? 'disconnected' : 'connected')}
-                  className="bg-surface-container-high border border-outline-variant/35 text-[9px] font-bold text-on-surface px-2 py-0.5 rounded hover:bg-surface-container-highest transition-all"
+                  className="bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/40 text-[9px] font-bold text-on-surface px-2.5 py-1 rounded-md transition-all active:scale-95"
                 >
                   {connectionState === 'connected' ? 'Drop Sync' : 'Restore Sync'}
                 </button>

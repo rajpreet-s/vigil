@@ -376,4 +376,20 @@ describe("buildDeployCorrelation", () => {
         );
         expect(result).not.toBeNull();
     });
+
+    it("respects custom lookback window (e.g. 15 minutes)", () => {
+        const deploy20MinAgo = new Date(T2.getTime() - 20 * 60 * 1000);
+        // Default 30m window matches 20m ago
+        expect(buildDeployCorrelation([anomaly("api", T2)], [deploy("api", deploy20MinAgo)], 30)).not.toBeNull();
+        // With 15m window, 20m ago is excluded
+        expect(buildDeployCorrelation([anomaly("api", T2)], [deploy("api", deploy20MinAgo)], 15)).toBeNull();
+    });
+
+    it("respects extended custom lookback window (e.g. 60 minutes)", () => {
+        const deploy45MinAgo = new Date(T2.getTime() - 45 * 60 * 1000);
+        // Default 30m excludes 45m ago
+        expect(buildDeployCorrelation([anomaly("api", T2)], [deploy("api", deploy45MinAgo)], 30)).toBeNull();
+        // 60m window includes 45m ago
+        expect(buildDeployCorrelation([anomaly("api", T2)], [deploy("api", deploy45MinAgo)], 60)).not.toBeNull();
+    });
 });

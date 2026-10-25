@@ -55,6 +55,8 @@ export async function rca_node(
         'rca_node: starting structured RCA'
     );
 
+    const deployWindowMinutes = state.orgConfig?.deployWindowMinutes ?? 30;
+
     // ── Build the prompt ──────────────────────────────────────────────────────
     const systemPrompt = buildSystemPrompt({
         incidentId,
@@ -65,6 +67,7 @@ export async function rca_node(
         investigationFindings,
         runbookChunks,
         correlateConfidence: confidence,
+        deployWindowMinutes,
     });
 
     // ── Single LLM call with retry and model fallback ────────────────────────
@@ -95,7 +98,7 @@ export async function rca_node(
 
     // ── Parse JSON output ─────────────────────────────────────────────────────
     const { q1WhatBroke, q2WhatCausedIt, q3DidWeCauseIt, fixSteps, rcaConfidence } =
-        parseRcaResponse(rawText, incidentId);
+        parseRcaResponse(rawText, incidentId, deployWindowMinutes);
 
     // Derive prose summary for DB/audit — Q1+Q2+Q3 joined. Not shown in Slack.
     const rcaSummary = [q1WhatBroke, q2WhatCausedIt, q3DidWeCauseIt]
@@ -156,6 +159,7 @@ interface PromptArgs {
     investigationFindings: string | null;
     runbookChunks: { content: string | null; metadata: Record<string, unknown> | null }[];
     correlateConfidence: 'HIGH' | 'MEDIUM' | 'LOW' | null;
+    deployWindowMinutes?: number;
 }
 
 export function buildSystemPrompt({
@@ -167,6 +171,7 @@ export function buildSystemPrompt({
     investigationFindings,
     runbookChunks,
     correlateConfidence,
+    deployWindowMinutes = 30,
 }: PromptArgs): string {
     // ── Q1 evidence: causal timeline ─────────────────────────────────────────
     const timelineText =
@@ -219,7 +224,7 @@ Service dependency graph (direct neighbors of affected services only):
 ${topologySubgraph}
 
 ━━━ Q3 EVIDENCE — DID WE CAUSE IT (deploy correlation) ━━━
-${deployCorrelation ?? 'None — no deploy found within 30 minutes of any anomaly'}
+${deployCorrelation ?? `None — no deploy found within ${deployWindowMinutes} minutes of any anomaly`}
 
 ━━━ SUPPLEMENTAL INVESTIGATION FINDINGS (from metric deep-dive, if available) ━━━
 ${investigationFindings ?? 'Not available — use causal timeline and deploy correlation above'}
@@ -239,7 +244,7 @@ Do NOT use emojis anywhere in your response. Keep all output clean and professio
 
   "q2WhatCausedIt": "Root cause: *service_name* — \`metric_name\` first triggered at HH:MM UTC\ncascade: *svc1* (HH:MM UTC) → *svc2* (HH:MM UTC) → ...\nConfidence: *HIGH|MEDIUM|LOW* · topology-confirmed cascade\n(If root cause unknown: 'Root cause not conclusively identified. Confidence: *LOW*.')",
 
-  "q3DidWeCauseIt": "<one of two forms>:\n  If deploy preceded anomaly: '[DEPLOY] *service_name* deployed N min before first anomaly · @author · N files changed'\n  If no deploy:               '[NO DEPLOY] No deploy found within the 30-minute window'",
+  "q3DidWeCauseIt": "<one of two forms>:\n  If deploy preceded anomaly: '[DEPLOY] *service_name* deployed N min before first anomaly · @author · N files changed'\n  If no deploy:               '[NO DEPLOY] No deploy found within the ${deployWindowMinutes}-minute window'",
 
   "fixSteps": [
     "<Specific CLI command or action verbatim from the runbook excerpts above — not generic advice>",
@@ -318,7 +323,11 @@ interface RcaOutput {
     rcaConfidence: number;
 }
 
-export function parseRcaResponse(rawText: string, incidentId: string): RcaOutput {
+export function parseRcaResponse(
+    rawText: string,
+    incidentId: string,
+    deployWindowMinutes: number = 30
+): RcaOutput {
     // Strip markdown fences if the model ignores instructions
     const cleaned = rawText
         .replace(/^```(?:json)?\s*/i, '')
@@ -341,7 +350,7 @@ export function parseRcaResponse(rawText: string, incidentId: string): RcaOutput
         const q3DidWeCauseIt =
             typeof parsed.q3DidWeCauseIt === 'string' && parsed.q3DidWeCauseIt.trim()
                 ? parsed.q3DidWeCauseIt.trim()
-                : '✅ No deploy found within the 30-minute window';
+                : `✅ No deploy found within the ${deployWindowMinutes}-minute window`;
 
         const fixSteps = Array.isArray(parsed.fixSteps)
             ? parsed.fixSteps.filter((s: unknown): s is string => typeof s === 'string')
