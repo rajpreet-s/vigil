@@ -18,7 +18,7 @@ export interface FormattedRca {
 }
 
 /**
- * Strips raw markdown asterisks (*, **) and clean extra whitespace.
+ * Strips raw markdown asterisks (*, **) and heading hashes (#, ###) and cleans extra whitespace.
  */
 export function sanitizeMarkdownText(text: string): string {
     if (!text) return '';
@@ -26,6 +26,9 @@ export function sanitizeMarkdownText(text: string): string {
         // Strip bold/italic asterisks while preserving actual word content
         .replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1')
         .replace(/\*/g, '')
+        // Strip markdown heading hashes and trailing hashes
+        .replace(/(?:^|\s)#{1,6}(?:\s|$)/g, ' ')
+        .replace(/#+$/g, '')
         .replace(/\s+/g, ' ')
         .trim();
 }
@@ -51,9 +54,6 @@ export function parseRunbookSteps(stepsInput: string[] | string | undefined): Ru
         // Strip leading number like "1. ", "1) ", "[1] "
         const cleaned = raw.replace(/^\s*(?:\[?\d+\]?[.):-]?\s*)/, '').trim();
 
-        // Check if there is an explicit command separated by a colon or backticks
-        // E.g. "Scale PgBouncer: kubectl scale deployment/pgbouncer --replicas=4"
-        // E.g. "Inspect logs: `journalctl -u postgresql -n 100`"
         let description = cleaned;
         let command: string | undefined = undefined;
 
@@ -67,16 +67,22 @@ export function parseRunbookSteps(stepsInput: string[] | string | undefined): Ru
             const potentialDesc = cleaned.slice(0, colonIdx).trim();
             const potentialCmd = cleaned.slice(colonIdx + 2).trim();
 
-            const isCmd = /^(?:kubectl|sudo|curl|psql|journalctl|systemctl|docker|helm|git|SELECT|ALTER|UPDATE|export|cat|grep|ls|kill|pkill)\b/i.test(potentialCmd) ||
+            const isCmd = /^(?:kubectl|sudo|curl|psql|journalctl|systemctl|docker|helm|git|SELECT|ALTER|UPDATE|DELETE|export|cat|grep|ls|kill|pkill)\b/i.test(potentialCmd) ||
                 potentialCmd.includes(' --') || potentialCmd.startsWith('-');
 
             if (isCmd) {
                 description = potentialDesc;
                 command = potentialCmd;
             }
-        } else if (/^(?:kubectl|sudo|curl|psql|journalctl|systemctl|docker|helm|git|SELECT|export)\b/i.test(cleaned)) {
+        } else if (/^(?:kubectl|sudo|curl|psql|journalctl|systemctl|docker|helm|git|SELECT|ALTER|UPDATE|DELETE|export)\b/i.test(cleaned)) {
             command = cleaned;
             description = `Execute ${cleaned.split(' ')[0]} command`;
+        } else {
+            // Check if there is an embedded SQL or command expression
+            const embeddedMatch = cleaned.match(/\b(SELECT\s+[^.]+|ALTER\s+[^.]+|UPDATE\s+[^.]+|pg_terminate_backend\([^)]+\)|kubectl\s+[a-z0-9\-_./]+)/i);
+            if (embeddedMatch && embeddedMatch[1]) {
+                command = embeddedMatch[1].trim();
+            }
         }
 
         // Clean up markdown in description
@@ -115,18 +121,18 @@ export function parseRcaSummary(
         q1 = parts[0] ? parts[0].trim() : '';
         q2 = parts[1] ? parts[1].trim() : '';
         q3 = parts[2] ? parts[2].trim() : '';
-    } else if (rawStr.includes('Q1')) {
+    } else if (/Q1\b/i.test(rawStr)) {
         // 2. If stored with Q1/Q2/Q3/Q4 headers
-        const q1Match = rawStr.match(/Q1[^\n]*\n([\s\S]*?)(?=Q2|$)/i);
+        const q1Match = rawStr.match(/(?:^|\n)(?:#{1,6}\s*)?Q1[^\n]*\n([\s\S]*?)(?=(?:\n\s*#{1,6}\s*|\n\s*)Q2\b|$)/i);
         if (q1Match && q1Match[1]) q1 = q1Match[1].trim();
 
-        const q2Match = rawStr.match(/Q2[^\n]*\n([\s\S]*?)(?=Q3|$)/i);
+        const q2Match = rawStr.match(/(?:^|\n)(?:#{1,6}\s*)?Q2[^\n]*\n([\s\S]*?)(?=(?:\n\s*#{1,6}\s*|\n\s*)Q3\b|$)/i);
         if (q2Match && q2Match[1]) q2 = q2Match[1].trim();
 
-        const q3Match = rawStr.match(/Q3[^\n]*\n([\s\S]*?)(?=Q4|$)/i);
+        const q3Match = rawStr.match(/(?:^|\n)(?:#{1,6}\s*)?Q3[^\n]*\n([\s\S]*?)(?=(?:\n\s*#{1,6}\s*|\n\s*)Q4\b|$)/i);
         if (q3Match && q3Match[1]) q3 = q3Match[1].trim();
 
-        const q4Match = rawStr.match(/Q4[^\n]*\n([\s\S]*?)(?=$)/i);
+        const q4Match = rawStr.match(/(?:^|\n)(?:#{1,6}\s*)?Q4[^\n]*\n([\s\S]*?)$/i);
         if (q4Match && q4Match[1]) q4 = q4Match[1].trim();
     } else if (rawStr.length > 0) {
         // 3. Plain summary stored in DB
@@ -162,20 +168,29 @@ export function parseRcaSummary(
         q3 = `[NO DEPLOY] No deploy found within the 30-minute window`;
     }
 
-    // Sanitize Q1, Q2, Q3 from raw markdown asterisks
-    const cleanQ1 = sanitizeMarkdownText(q1);
-    const cleanQ2 = sanitizeMarkdownText(q2);
-    const cleanQ3 = sanitizeMarkdownText(q3);
+    // Sanitize Q1, Q2, Q3 from raw markdown asterisks and trailing header hashes
+    const cleanQ1 = sanitizeMarkdownText(q1).replace(/[#*]+$/g, '').trim();
+    const cleanQ2 = sanitizeMarkdownText(q2).replace(/[#*]+$/g, '').trim();
+    const cleanQ3 = sanitizeMarkdownText(q3).replace(/[#*]+$/g, '').trim();
 
-    // Format Q4 exclusively from real fixSteps array or extracted q4 string
-    const runbookSteps = parseRunbookSteps(fixSteps && fixSteps.length > 0 ? fixSteps : q4);
+    // Prefer Q4 steps if they contain richer executable commands, else fixSteps
+    const stepsFromFix = parseRunbookSteps(fixSteps);
+    const stepsFromQ4 = parseRunbookSteps(q4);
+    const fixHasCmds = stepsFromFix.some((s) => Boolean(s.command));
+    const q4HasCmds = stepsFromQ4.some((s) => Boolean(s.command));
 
-    if (fixSteps && fixSteps.length > 0) {
+    const runbookSteps = (fixHasCmds || !q4HasCmds) && stepsFromFix.length > 0
+        ? stepsFromFix
+        : stepsFromQ4.length > 0
+          ? stepsFromQ4
+          : stepsFromFix;
+
+    if (fixSteps && fixSteps.length > 0 && !q4HasCmds) {
         q4 = fixSteps.map((step, idx) => `${idx + 1}. ${sanitizeMarkdownText(step)}`).join('\n');
     } else if (!q4) {
         q4 = `_No fix steps available._`;
     } else {
-        q4 = sanitizeMarkdownText(q4);
+        q4 = sanitizeMarkdownText(q4).replace(/[#*]+$/g, '').trim();
     }
 
     // Generate Title

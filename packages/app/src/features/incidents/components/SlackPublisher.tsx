@@ -108,8 +108,8 @@ export const SlackPublisher: React.FC = () => {
     };
 
     return (
-        <div className="bg-surface-container/90 border border-surface-container-high/60 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between gap-3 border-b border-surface-container-high/40 pb-3">
+        <div className="bg-surface border border-surface-container-high/80 rounded-2xl p-4 sm:p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between gap-3 border-b border-surface-container-high/60 pb-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-on-surface tracking-wide font-mono uppercase">
                     <MessageSquare className="w-4 h-4 text-primary" />
                     <span>Human-in-the-Loop Slack Publisher</span>
@@ -128,7 +128,7 @@ export const SlackPublisher: React.FC = () => {
                     rows={12}
                     value={draftRcaReport || parsed.formattedSlackMrkdwn}
                     onChange={(e) => setDraftRcaReport(e.target.value)}
-                    className="w-full bg-surface-container-lowest border border-surface-container-high/80 rounded-xl p-3.5 text-xs text-on-surface font-mono leading-relaxed focus:outline-none focus:border-primary transition-all select-text whitespace-pre-wrap"
+                    className="w-full bg-surface-container-lowest border border-surface-container-high/80 rounded-xl p-3.5 text-xs text-on-surface font-mono leading-relaxed focus:outline-none focus:border-primary transition-all select-text whitespace-pre-wrap shadow-inner"
                 />
             </div>
 
@@ -136,7 +136,7 @@ export const SlackPublisher: React.FC = () => {
                 <button
                     type="button"
                     onClick={() => setShowDismissModal(true)}
-                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5"
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                     <AlertTriangle className="w-3.5 h-3.5" />
                     <span>Dismiss Incident</span>
@@ -146,7 +146,7 @@ export const SlackPublisher: React.FC = () => {
                     type="button"
                     onClick={onApproveClick}
                     disabled={isBroadcasting}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary text-on-primary font-bold text-xs hover:brightness-110 shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary text-on-primary font-bold text-xs hover:brightness-110 shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                 >
                     {isBroadcasting ? (
                         <>
@@ -156,7 +156,7 @@ export const SlackPublisher: React.FC = () => {
                     ) : (
                         <>
                             <Send className="w-3.5 h-3.5" />
-                            <span>Approve & Broadcast to Slack</span>
+                            <span>Approve &amp; Broadcast to Slack</span>
                         </>
                     )}
                 </button>

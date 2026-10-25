@@ -345,6 +345,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
                 },
             });
 
+            const defaultGeminiKey = process.env.GEMINI_API_KEY || null;
+            const defaultGeminiModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+
             // 2. Identify or provision the dedicated Demo Organization (isolated from all other accounts)
             let demoOrg = await fastify.prisma.organization.findUnique({
                 where: { slug: 'vigil-demo' },
@@ -357,9 +360,17 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
                         slug: 'vigil-demo',
                         api_key: `vgl_live_demo_${crypto.randomBytes(20).toString('hex')}`,
                         invite_code: `vigil_inv_demo_${crypto.randomBytes(6).toString('hex')}`,
-                        gemini_api_key: process.env.GEMINI_API_KEY || null,
-                        gemini_model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+                        gemini_api_key: defaultGeminiKey,
+                        gemini_model: defaultGeminiModel,
                         slack_webhook_url: process.env.SLACK_WEBHOOK_URL || null,
+                    },
+                });
+            } else if (!demoOrg.gemini_api_key) {
+                demoOrg = await fastify.prisma.organization.update({
+                    where: { id: demoOrg.id },
+                    data: {
+                        gemini_api_key: defaultGeminiKey,
+                        gemini_model: demoOrg.gemini_model || defaultGeminiModel,
                     },
                 });
             }
@@ -473,6 +484,72 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
                         update: {
                             org_id: demoOrg.id,
                         },
+                    });
+                }
+            }
+
+            // 6. Ensure standard runbooks exist for Demo Org if empty
+            const runbookCount = await fastify.prisma.runbook.count({
+                where: { OR: [{ org_id: demoOrg.id }, { org_id: null }] },
+            });
+
+            if (runbookCount === 0) {
+                const defaultRunbooks = [
+                    {
+                        chroma_id: 'runbook-db-connection-pool-exhaustion',
+                        title: 'PostgreSQL Connection Pool Exhaustion Mitigation',
+                        service_name: 'postgres-db',
+                        file_path: 'db_connection_pool_exhaustion.md',
+                    },
+                    {
+                        chroma_id: 'runbook-redis-outage',
+                        title: 'Redis Cluster Replication Failure & Outage Protocol',
+                        service_name: 'redis-cache',
+                        file_path: 'redis_outage.md',
+                    },
+                    {
+                        chroma_id: 'runbook-traffic-spike',
+                        title: 'Traffic Spike & Inbound Throttling Mitigation',
+                        service_name: 'api-gateway',
+                        file_path: 'traffic_spike.md',
+                    },
+                    {
+                        chroma_id: 'runbook-memory-pressure',
+                        title: 'Container Memory Pressure & Heap Saturation Protocol',
+                        service_name: 'order-service',
+                        file_path: 'memory-pressure.md',
+                    },
+                    {
+                        chroma_id: 'runbook-cpu-spike',
+                        title: 'CPU Saturation & Thread Starvation Protocol',
+                        service_name: 'api-gateway',
+                        file_path: 'cpu-spike.md',
+                    },
+                    {
+                        chroma_id: 'runbook-disk-space-warning',
+                        title: 'Disk Space Saturation Emergency Mitigation',
+                        service_name: 'order-service',
+                        file_path: 'disk_space_warning.md',
+                    },
+                    {
+                        chroma_id: 'runbook-ssl-certificate-expiry',
+                        title: 'TLS/SSL Certificate Expiration & Renewal Protocol',
+                        service_name: 'api-gateway',
+                        file_path: 'ssl_certificate_expiry.md',
+                    },
+                    {
+                        chroma_id: 'runbook-backup-failure',
+                        title: 'Database Automated Snapshot & Backup Failure Recovery',
+                        service_name: 'postgres-db',
+                        file_path: 'backup_failure.md',
+                    },
+                ];
+
+                for (const rb of defaultRunbooks) {
+                    await fastify.prisma.runbook.upsert({
+                        where: { chroma_id: rb.chroma_id },
+                        create: { ...rb, org_id: demoOrg.id },
+                        update: { org_id: demoOrg.id },
                     });
                 }
             }

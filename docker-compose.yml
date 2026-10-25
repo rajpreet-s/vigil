@@ -92,6 +92,8 @@ services:
             - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
             - FRONTEND_URL=http://localhost:3000
             - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+            - GEMINI_API_KEY=${GEMINI_API_KEY}
+            - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.8-flash}
             - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
             - INCIDENT_SETTLE_DELAY_MS=${INCIDENT_SETTLE_DELAY_MS:-15000}
         ports:

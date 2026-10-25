@@ -13,7 +13,8 @@
         "db-generate": "prisma generate",
         "db-migrate": "prisma migrate dev",
         "db-reset": "prisma migrate reset",
-        "db-sync": "prisma migrate dev && prisma generate",
+        "db-seed": "tsx prisma/seed.ts",
+        "db-sync": "prisma migrate dev && prisma generate && tsx prisma/seed.ts",
         "chroma-setup": "tsx packages/agent/chroma/seed.ts",
         "chroma-inspect": "tsx packages/agent/chroma/inspect.ts",
         "start-agent": "tsx packages/agent/server.ts",
@@ -68,5 +69,8 @@
         "pino": "^10.3.1",
         "uuid": "^14.0.1",
         "zod": "^4.4.3"
+    },
+    "prisma": {
+        "seed": "tsx prisma/seed.ts"
     }
 }

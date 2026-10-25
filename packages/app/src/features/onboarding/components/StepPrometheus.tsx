@@ -5,9 +5,10 @@ import { useApp } from '../../../context/AppContext';
 interface StepPrometheusProps {
   onNext: (data: any) => void;
   onBack: () => void;
+  status?: any;
 }
 
-export const StepPrometheus: React.FC<StepPrometheusProps> = ({ onNext, onBack }) => {
+export const StepPrometheus: React.FC<StepPrometheusProps> = ({ onNext, onBack, status }) => {
   const { activeOrg } = useApp();
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedYaml, setCopiedYaml] = useState(false);
@@ -103,7 +104,11 @@ receivers:
     }
   };
 
-  const isReady = testResult?.success === true || alertConfigured;
+  const isReady =
+    testResult?.success === true ||
+    alertConfigured ||
+    (status?.integrations?.prometheus?.anomalyCount > 0) ||
+    activeOrg?.slug === 'vigil-demo';
 
   return (
     <div className="space-y-6 animate-fadeIn flex flex-col justify-between min-h-[480px]">

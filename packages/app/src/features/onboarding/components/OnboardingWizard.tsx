@@ -141,12 +141,24 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
     setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
-  const handleResetWizard = () => {
+  const handleResetWizard = async () => {
     localStorage.removeItem('vigil_onboarding_step');
     localStorage.removeItem('vigil_onboarding_max_step');
     localStorage.removeItem('vigil_onboarding_data');
     localStorage.removeItem('vigil_onboarding_completed_steps');
     localStorage.removeItem('vigil_onboarding_completed');
+    if (activeOrg?.slug === 'vigil-demo') {
+      try {
+        await fetch('/api/onboarding/reset-demo', { method: 'POST' });
+        const res = await fetch('/api/onboarding/status');
+        if (res.ok) {
+          const fresh = await res.json();
+          setStatus(fresh);
+        }
+      } catch (err) {
+        console.error('Failed to reset demo setup:', err);
+      }
+    }
     setWizardData({});
     setCompletedSteps([]);
     setMaxStepReached(1);
@@ -160,7 +172,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
     }
   };
 
-  const isCompleted = localStorage.getItem('vigil_onboarding_completed') === 'true' || currentStep === 5;
+  const isCompleted =
+    localStorage.getItem('vigil_onboarding_completed') === 'true' ||
+    status?.isComplete === true ||
+    currentStep === 5;
   const isOwner = status?.isOwner ?? (activeOrg?.role ? activeOrg.role === 'OWNER' : true);
   const currentRole = status?.orgRole || activeOrg?.role || (isOwner ? 'OWNER' : 'MEMBER');
 
@@ -183,6 +198,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
     // Readiness verification (Step 5) is accessible once Step 4 is completed or if user reached it
     if (stepNum === 5 && (completedSteps.includes(4) || isCompleted || maxStepReached >= 5)) return true;
     if (isCompleted) return true;
+    // If backend setup is already complete or on demo account, all steps can be inspected
+    if (status?.isComplete || activeOrg?.slug === 'vigil-demo') return true;
     return false;
   };
 
@@ -425,7 +442,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
           <div className="w-full lg:col-span-8">
             <div className="bg-surface-container/90 backdrop-blur-2xl border border-surface-container-high/60 rounded-2xl p-4 sm:p-6 lg:p-7 shadow-2xl relative">
               {currentStep === 1 && <StepWorkspace onNext={handleNextStep} status={status} isOwner={isOwner} />}
-              {currentStep === 2 && <StepPrometheus onNext={handleNextStep} onBack={handlePrevStep} />}
+              {currentStep === 2 && <StepPrometheus onNext={handleNextStep} onBack={handlePrevStep} status={status} />}
               {currentStep === 3 && <StepSlack onNext={handleNextStep} onBack={handlePrevStep} status={status} isOwner={isOwner} />}
               {currentStep === 4 && <StepKnowledge onNext={handleNextStep} onBack={handlePrevStep} isOwner={isOwner} />}
               {currentStep === 5 && (

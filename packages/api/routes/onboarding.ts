@@ -71,10 +71,21 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                 const anomalyCount = await fastify.prisma.anomaly.count();
 
                 // Read Gemini & Slack settings from database (org-level), fallback to env
-                const geminiKey = org?.gemini_api_key || process.env.GEMINI_API_KEY || null;
+                const geminiKey =
+                    org?.gemini_api_key || process.env.GEMINI_API_KEY || null;
                 const geminiModel =
                     org?.gemini_model || process.env.GEMINI_MODEL || 'gemini-3.8-flash';
                 const webhookUrl = org?.slack_webhook_url || process.env.SLACK_WEBHOOK_URL || null;
+
+                // Auto-repair demo org key if it was missing in database
+                if (org && !org.gemini_api_key && geminiKey) {
+                    await fastify.prisma.organization
+                        .update({
+                            where: { id: org.id },
+                            data: { gemini_api_key: geminiKey, gemini_model: geminiModel },
+                        })
+                        .catch(() => {});
+                }
 
                 const hasGemini = !!geminiKey && geminiKey.trim().length > 0;
                 const hasSlack = !!webhookUrl && webhookUrl.trim().length > 0;
@@ -779,6 +790,39 @@ const onboardingRoutes: FastifyPluginAsync = async (fastify) => {
                 success: true,
                 message: 'Onboarding completed successfully!',
                 timestamp: new Date().toISOString(),
+            });
+        }
+    );
+
+    // POST /api/onboarding/reset-demo - Restore demo account setup
+    fastify.post(
+        '/onboarding/reset-demo',
+        {
+            schema: {
+                description: 'Restores the pre-configured demo account onboarding state and topology.',
+                tags: ['Onboarding'],
+            },
+        },
+        async (request, reply) => {
+            const { org } = await getAuthAndOrg(request, fastify);
+            const targetOrg =
+                org ||
+                (await fastify.prisma.organization.findFirst({
+                    where: { slug: 'vigil-demo' },
+                }));
+            if (targetOrg) {
+                const defaultKey = process.env.GEMINI_API_KEY || null;
+                await fastify.prisma.organization.update({
+                    where: { id: targetOrg.id },
+                    data: {
+                        gemini_api_key: defaultKey,
+                        gemini_model: targetOrg.gemini_model || 'gemini-3.8-flash',
+                    },
+                });
+            }
+            return reply.send({
+                success: true,
+                message: 'Demo setup restored successfully.',
             });
         }
     );
