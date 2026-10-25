@@ -153,9 +153,10 @@ export function pickRootCause(
  */
 export function buildDeployCorrelation(
     rawAnomalies: Anomaly[],
-    recentDeployments: DeployEvent[]
+    recentDeployments: DeployEvent[],
+    windowMinutes: number = 30
 ): string | null {
-    const WINDOW_MS = 30 * 60 * 1000; // 30 minutes
+    const WINDOW_MS = Math.max(1, windowMinutes) * 60 * 1000;
 
     const hits: string[] = [];
 
@@ -256,7 +257,8 @@ export async function correlate_node(
     );
 
     // ── Deploy correlation ────────────────────────────────────────────────────
-    const deployCorrelation = buildDeployCorrelation(rawAnomalies, recentDeployments);
+    const windowMinutes = state.orgConfig?.deployWindowMinutes ?? 30;
+    const deployCorrelation = buildDeployCorrelation(rawAnomalies, recentDeployments, windowMinutes);
 
     nodeLogger.info(
         {

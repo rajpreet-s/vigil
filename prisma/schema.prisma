@@ -37,6 +37,8 @@ model Organization {
   gemini_api_key    String?              @db.Text
   gemini_model      String?              @default("gemini-3.8-flash") @db.VarChar(100)
   slack_webhook_url String?              @db.Text
+  deploy_window_minutes Int?             @default(30)
+  github_webhook_secret String?          @db.VarChar(255)
   created_at DateTime             @default(now()) @db.Timestamptz
   updated_at DateTime             @updatedAt @db.Timestamptz
 

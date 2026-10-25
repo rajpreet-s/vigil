@@ -78,6 +78,16 @@ export const StepComplete: React.FC<StepCompleteProps> = ({ summaryData: _summar
         <div className="flex items-center justify-between text-xs">
           <span className="flex items-center gap-2 text-on-surface">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>GitHub Deployment Correlation</span>
+          </span>
+          <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25 font-semibold">
+            Tracking Active
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between text-xs">
+          <span className="flex items-center gap-2 text-on-surface">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Topology Graph & Vector Index</span>
           </span>
           <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25 font-semibold">

@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { StepWorkspace } from './StepWorkspace';
 import { StepSlack } from './StepSlack';
 import { StepPrometheus } from './StepPrometheus';
+import { StepGitHub } from './StepGitHub';
 import { StepKnowledge } from './StepKnowledge';
 import { StepComplete } from './StepComplete';
-import { Check, Activity, Cpu, Server, Network, RotateCcw, Lock, Sun, Moon } from 'lucide-react';
+import { Check, Activity, Cpu, Server, Network, RotateCcw, Lock, Sun, Moon, GitCommit } from 'lucide-react';
 import VigilLogo from '../../../components/ui/VigilLogo';
 
 import { useApp } from '../../../context/AppContext';
@@ -22,7 +23,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
       const savedStep = localStorage.getItem('vigil_onboarding_step');
       if (savedStep) {
         const parsed = parseInt(savedStep, 10);
-        if (!isNaN(parsed) && parsed >= 1 && parsed <= 5) {
+        if (!isNaN(parsed) && parsed >= 1 && parsed <= 6) {
           return parsed;
         }
       }
@@ -48,7 +49,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
       if (savedCompleted) {
         const parsed = JSON.parse(savedCompleted);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return Math.min(Math.max(...parsed) + 1, 5);
+          return Math.min(Math.max(...parsed) + 1, 6);
         }
       }
     } catch {
@@ -132,7 +133,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
       }
       return prev;
     });
-    const next = Math.min(currentStep + 1, 5);
+    const next = Math.min(currentStep + 1, 6);
     setMaxStepReached((prev) => Math.max(prev, next));
     setCurrentStep(next);
   };
@@ -175,16 +176,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
   const isCompleted =
     localStorage.getItem('vigil_onboarding_completed') === 'true' ||
     status?.isComplete === true ||
-    currentStep === 5;
+    currentStep === 6;
   const isOwner = status?.isOwner ?? (activeOrg?.role ? activeOrg.role === 'OWNER' : true);
   const currentRole = status?.orgRole || activeOrg?.role || (isOwner ? 'OWNER' : 'MEMBER');
 
   const steps = [
     { num: 1, label: 'Gemini AI Engine', short: 'Gemini', desc: 'Reasoning model & live API key' },
     { num: 2, label: 'Telemetry & Ingestion', short: 'Telemetry', desc: 'Alertmanager webhook receiver' },
-    { num: 3, label: 'Slack Bot Alerts', short: 'Slack', desc: 'Instant incident notification' },
-    { num: 4, label: 'Service Topology', short: 'Topology', desc: 'Causal dependency graph' },
-    { num: 5, label: 'Readiness Verification', short: 'Ready', desc: 'Audit & launch incident command' },
+    { num: 3, label: 'GitHub Deployments', short: 'GitHub', desc: 'Webhook & deploy causal window' },
+    { num: 4, label: 'Slack Bot Alerts', short: 'Slack', desc: 'Instant incident notification' },
+    { num: 5, label: 'Service Topology', short: 'Topology', desc: 'Causal dependency graph' },
+    { num: 6, label: 'Readiness Verification', short: 'Ready', desc: 'Audit & launch incident command' },
   ];
 
   const canNavigateTo = (stepNum: number) => {
@@ -195,8 +197,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
     if (completedSteps.includes(stepNum)) return true;
     // Step N is accessible if prior step N-1 was completed
     if (completedSteps.includes(stepNum - 1)) return true;
-    // Readiness verification (Step 5) is accessible once Step 4 is completed or if user reached it
-    if (stepNum === 5 && (completedSteps.includes(4) || isCompleted || maxStepReached >= 5)) return true;
+    // Readiness verification (Step 6) is accessible once Step 5 is completed or if user reached it
+    if (stepNum === 6 && (completedSteps.includes(5) || isCompleted || maxStepReached >= 6)) return true;
     if (isCompleted) return true;
     // If backend setup is already complete or on demo account, all steps can be inspected
     if (status?.isComplete || activeOrg?.slug === 'vigil-demo') return true;
@@ -262,7 +264,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
               </button>
             ) : (
               <div className="text-[11px] font-mono px-2.5 py-1 rounded-md bg-surface-container-high text-secondary border border-surface-container-highest">
-                Step {currentStep} of 5 <span className="text-amber-400/90 font-bold">• In Progress</span>
+                Step {currentStep} of 6 <span className="text-amber-400/90 font-bold">• In Progress</span>
               </div>
             )}
           </div>
@@ -323,7 +325,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
             <div className="bg-surface-container/90 backdrop-blur-xl border border-surface-container-high/60 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
               <div className="text-xs font-bold text-on-surface uppercase tracking-wider mb-2 flex items-center justify-between border-b border-surface-container-high/40 pb-2">
                 <span>Setup Workflow</span>
-                <span className="font-mono text-primary text-[11px]">Step {currentStep} of 5</span>
+                <span className="font-mono text-primary text-[11px]">Step {currentStep} of 6</span>
               </div>
 
               <div className="space-y-1">
@@ -434,6 +436,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
                   </span>
                   <span className="font-mono text-emerald-700 dark:text-emerald-400 font-medium">{status?.integrations?.prometheus?.anomalyCount || 0} ingested</span>
                 </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-secondary/80">
+                    <GitCommit className="w-3.5 h-3.5 text-secondary" />
+                    Deployments
+                  </span>
+                  <span className="font-mono text-emerald-700 dark:text-emerald-400 font-medium">
+                    {status?.integrations?.github?.deployCount || 0} tracked ({status?.integrations?.github?.deployWindowMinutes || 30}m)
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -443,9 +455,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
             <div className="bg-surface-container/90 backdrop-blur-2xl border border-surface-container-high/60 rounded-2xl p-4 sm:p-6 lg:p-7 shadow-2xl relative">
               {currentStep === 1 && <StepWorkspace onNext={handleNextStep} status={status} isOwner={isOwner} />}
               {currentStep === 2 && <StepPrometheus onNext={handleNextStep} onBack={handlePrevStep} status={status} />}
-              {currentStep === 3 && <StepSlack onNext={handleNextStep} onBack={handlePrevStep} status={status} isOwner={isOwner} />}
-              {currentStep === 4 && <StepKnowledge onNext={handleNextStep} onBack={handlePrevStep} isOwner={isOwner} />}
-              {currentStep === 5 && (
+              {currentStep === 3 && <StepGitHub onNext={handleNextStep} onBack={handlePrevStep} status={status} isOwner={isOwner} />}
+              {currentStep === 4 && <StepSlack onNext={handleNextStep} onBack={handlePrevStep} status={status} isOwner={isOwner} />}
+              {currentStep === 5 && <StepKnowledge onNext={handleNextStep} onBack={handlePrevStep} isOwner={isOwner} />}
+              {currentStep === 6 && (
                 <StepComplete summaryData={wizardData} onFinish={handleFinishOnboarding} />
               )}
             </div>

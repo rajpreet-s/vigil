@@ -31,7 +31,12 @@ export async function load_node(
     nodeLogger.info({ incidentId }, 'load_node: starting data fetch');
 
     // ── 0. Fetch incident & organization config ──────────────────────────────
-    let orgConfig: { geminiApiKey?: string | null; geminiModel?: string | null; slackWebhookUrl?: string | null } | null = null;
+    let orgConfig: {
+        geminiApiKey?: string | null;
+        geminiModel?: string | null;
+        slackWebhookUrl?: string | null;
+        deployWindowMinutes?: number | null;
+    } | null = null;
     let incidentOrgId: string | null = null;
     try {
         const incident = await prisma.incident.findUnique({
@@ -44,6 +49,7 @@ export async function load_node(
                 geminiApiKey: incident.org.gemini_api_key,
                 geminiModel: incident.org.gemini_model,
                 slackWebhookUrl: incident.org.slack_webhook_url,
+                deployWindowMinutes: incident.org.deploy_window_minutes ?? 30,
             };
         } else {
             // Fallback to first organization in DB
@@ -56,6 +62,7 @@ export async function load_node(
                     geminiApiKey: firstOrg.gemini_api_key,
                     geminiModel: firstOrg.gemini_model,
                     slackWebhookUrl: firstOrg.slack_webhook_url,
+                    deployWindowMinutes: firstOrg.deploy_window_minutes ?? 30,
                 };
             }
         }
@@ -101,7 +108,10 @@ export async function load_node(
     // DEGRADED: deploy event failure skips deploy correlation, not a blocker.
     const affectedServices = [...new Set(rawAnomalies.map((a) => a.service_name))];
 
-    const since = new Date(Date.now() - DEPLOY_LOOKBACK_MS);
+    const windowMinutes = orgConfig?.deployWindowMinutes ?? 30;
+    // Look back at least 2x the user-configured window (or minimum 60m) to catch pre-incident commits
+    const lookbackMs = Math.max(windowMinutes * 2, 60) * 60 * 1000;
+    const since = new Date(Date.now() - lookbackMs);
 
     let recentDeployments: DeployEvent[] = [];
     if (affectedServices.length > 0) {
@@ -110,6 +120,7 @@ export async function load_node(
                 where: {
                     service_name: { in: affectedServices },
                     deployed_at: { gte: since },
+                    ...(incidentOrgId ? { OR: [{ org_id: incidentOrgId }, { org_id: null }] } : {}),
                 },
                 orderBy: { deployed_at: 'desc' },
             });

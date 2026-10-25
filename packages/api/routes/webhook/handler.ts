@@ -98,9 +98,16 @@ export const handleAlertmanagerWebhook: RouteHandler<{ Body: AlertmanagerPayload
 export const handleGithubWebhook: RouteHandler<{Body: GitHubPushPayload}> = async (request, reply) => {
     const { commits, head_commit, ref } = request.body;
 
-    // Filter: Only process push/merge events targeted at the designated deploy branch (default: main)
+    // Filter: Only process push/merge events targeted at the designated deploy branch (default: main or master)
     const targetBranch = process.env.DEPLOY_BRANCH || "refs/heads/main";
-    if (ref !== targetBranch) {
+    const isTargetBranch =
+        ref === targetBranch ||
+        ref === "refs/heads/main" ||
+        ref === "refs/heads/master" ||
+        ref === "main" ||
+        ref === "master";
+
+    if (!isTargetBranch) {
         request.log.info(
             `Ignoring GitHub webhook: push is to branch "${ref}" but target deploy branch is "${targetBranch}".`
         );
@@ -114,10 +121,12 @@ export const handleGithubWebhook: RouteHandler<{Body: GitHubPushPayload}> = asyn
 
     const prisma = request.server.prisma;
     const webhookService = new WebhookService(prisma, request.log);
+    const targetOrgId = (request as any).targetOrgId || (request.query as any)?.org_id;
+
     let processedCount = 0;
     for (const commit of commits) {
         try {
-            await webhookService.processDeployment(commit, head_commit, ref);
+            await webhookService.processDeployment(commit, head_commit, ref, targetOrgId);
             processedCount++;
         } catch (err) {
             request.log.error(
