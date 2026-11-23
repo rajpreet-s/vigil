@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ── Stage 1: Builder ─────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Copy manifests first to leverage layer caching
@@ -11,11 +11,11 @@ COPY prisma/ ./prisma/
 COPY prisma.config.ts ./
 
 # Install root dependencies (including Prisma CLI required for generation)
-RUN npm ci
+RUN npm ci --onnxruntime-node-install-cuda=skip
 
 # Install API-specific dependencies (including TypeScript required for building)
 WORKDIR /app/packages/api
-RUN npm ci
+RUN npm ci --onnxruntime-node-install-cuda=skip
 
 # Back to root to generate Prisma client (creates files inside node_modules/.prisma)
 WORKDIR /app
@@ -38,11 +38,11 @@ WORKDIR /app/packages/api
 RUN npm prune --omit=dev
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 
 # Create non-root user and group for security
-RUN addgroup --system vigil && adduser --system --ingroup vigil vigil
+RUN addgroup -S vigil && adduser -S vigil -G vigil
 
 # Copy pruned root and api node_modules (includes generated Prisma client)
 COPY --from=builder --chown=vigil:vigil /app/node_modules ./node_modules
