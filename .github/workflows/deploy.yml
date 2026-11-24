@@ -6,15 +6,15 @@ on:
         branches:
             - main
             - 52-migrate-to-new-gcp-setup
-        # paths:
-        #     - 'packages/api/**'
-        #     - 'packages/agent/**'
-        #     - 'packages/app/**'
-        #     - 'packages/web/**'
-        #     - 'packages/shared/**'
-        #     - 'prisma/**'
-        #     - 'iac/k8s/**'
-        #     - '.github/workflows/deploy.yml'
+        paths:
+            - 'packages/api/**'
+            - 'packages/agent/**'
+            - 'packages/app/**'
+            - 'packages/web/**'
+            - 'packages/shared/**'
+            - 'prisma/**'
+            - 'iac/k8s/**'
+            - '.github/workflows/deploy.yml'
 
 # Keyless OIDC authentication requires id-token: write permission
 permissions:
@@ -67,7 +67,7 @@ jobs:
     build-api:
         name: Build & Push API
         needs: detect-changes
-        # if: needs.detect-changes.outputs.api == 'true'
+        if: needs.detect-changes.outputs.api == 'true'
         runs-on: ubuntu-latest
         steps:
             - name: Checkout Code
@@ -100,7 +100,7 @@ jobs:
     build-agent:
         name: Build & Push Agent
         needs: detect-changes
-        # if: needs.detect-changes.outputs.agent == 'true'
+        if: needs.detect-changes.outputs.agent == 'true'
         runs-on: ubuntu-latest
         steps:
             - name: Checkout Code
@@ -133,7 +133,7 @@ jobs:
     build-app:
         name: Build & Push App (Dashboard)
         needs: detect-changes
-        # if: needs.detect-changes.outputs.app == 'true'
+        if: needs.detect-changes.outputs.app == 'true'
         runs-on: ubuntu-latest
         steps:
             - name: Checkout Code
@@ -166,7 +166,7 @@ jobs:
     build-web:
         name: Build & Push Web (Landing Page)
         needs: detect-changes
-        # if: needs.detect-changes.outputs.web == 'true'
+        if: needs.detect-changes.outputs.web == 'true'
         runs-on: ubuntu-latest
         steps:
             - name: Checkout Code
@@ -223,7 +223,7 @@ jobs:
 
             # If Kubernetes manifests changed, apply them first
             - name: Apply Kubernetes Manifests
-              # if: needs.detect-changes.outputs.k8s == 'true'
+              if: needs.detect-changes.outputs.k8s == 'true'
               run: |
                   kubectl apply -f iac/k8s/00-namespace.yaml
                   kubectl apply -f iac/k8s/01-sealed-secrets.yaml
