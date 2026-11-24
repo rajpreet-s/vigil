@@ -11,11 +11,11 @@ COPY prisma/ ./prisma/
 COPY prisma.config.ts ./
 
 # Install root dependencies (including Prisma CLI required for generation)
-RUN npm ci
+RUN npm ci --onnxruntime-node-install-cuda=skip
 
 # Install API-specific dependencies (including TypeScript required for building)
 WORKDIR /app/packages/api
-RUN npm ci
+RUN npm ci --onnxruntime-node-install-cuda=skip
 
 # Back to root to generate Prisma client (creates files inside node_modules/.prisma)
 WORKDIR /app

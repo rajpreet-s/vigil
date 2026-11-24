@@ -51,3 +51,13 @@ resource "google_service_account_iam_member" "wif_sa_binding" {
   # This says: "Any verified entity from this pool with repo == rajpreet-s/vigil can assume this SA"
   member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_pool.name}/attribute.repository/rajpreet-s/vigil"
 }
+
+data "google_project" "current" {
+  project_id = var.project_id
+}
+# Allow GKE default node service account to pull from Artifact Registry
+resource "google_project_iam_member" "gke_node_artifact_registry_reader" {
+  project = var.project_id
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+}

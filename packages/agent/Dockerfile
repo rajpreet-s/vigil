@@ -9,7 +9,7 @@ COPY package.json package-lock.json ./
 COPY prisma/ ./prisma/
 
 # Install ALL dependencies (including devDependencies required for tsc compilation)
-RUN npm ci
+RUN npm ci --onnxruntime-node-install-cuda=skip
 
 # Generate Prisma client
 RUN npx prisma generate
